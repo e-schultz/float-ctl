@@ -445,7 +445,7 @@ class CrossReferenceSystem:
 {chr(10).join([f"- [[{ref['target']}]] ({'✅ exists' if ref.get('exists') else '❌ missing'})" for ref in cross_refs.get('vault_references', [])[:10]])}
 
 ### Conversation Links
-{chr(10).join([f"- [{link['title']}]({link['url']})" for link in cross_refs.get('conversation_links', [])])}
+{chr(10).join([f"- [{link.get('title', 'Link')}]({link.get('url', '#')})" for link in cross_refs.get('conversation_links', [])])}
 
 ### Topic Connections
 {', '.join([f"#{topic}" for topic in cross_refs.get('topic_connections', [])])}

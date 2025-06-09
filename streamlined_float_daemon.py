@@ -174,7 +174,13 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         if (file_path.suffix in ['.tmp', '.part', '.diz', '.crdownload'] or 
             file_path.name.startswith('.') or 
             file_path.name.endswith('.float_dis.md') or
-            'Unconfirmed' in file_path.name):
+            'Unconfirmed' in file_path.name or
+            file_path.name.startswith('Unconfirmed')):
+            return
+            
+        # Additional check: ensure file still exists before processing
+        if not file_path.exists():
+            self.logger.info(f"File disappeared before processing: {file_path.name}")
             return
             
         # Prevent duplicate processing
@@ -566,7 +572,11 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         
         # Content type detection
         content_lower = content.lower()
-        if 'conversation' in content_lower or 'chat' in content_lower:
+        if '"powered_by": "Claude Exporter' in content:
+            analysis['content_type'] = "AI conversation export (Chrome plugin)"
+        elif '"powered_by": "ChatGPT Exporter' in content:
+            analysis['content_type'] = "AI conversation export (Chrome plugin)"
+        elif 'conversation' in content_lower or 'chat' in content_lower:
             analysis['content_type'] = "Conversation/Chat export"
         elif content.strip().startswith('{') or content.strip().startswith('['):
             analysis['content_type'] = "JSON data structure"

@@ -139,11 +139,11 @@ class EnhancedSystemIntegration:
         
         enhanced = {
             'is_conversation': False,
-            'conversation_platform': None,
-            'conversation_id': None,
+            'conversation_platform': 'unknown',
+            'conversation_id': 'unknown',
             'participants': [],
             'topics': [],
-            'signal_density': 0,
+            'signal_density': 0.0,
             'content_classification': 'unknown',
             'tripartite_routing': []
         }
@@ -176,17 +176,92 @@ class EnhancedSystemIntegration:
         """Analyze content to determine if it's a conversation and extract metadata"""
         analysis = {
             'is_conversation': False,
-            'conversation_platform': None,
-            'conversation_id': None,
+            'conversation_platform': 'unknown',
+            'conversation_id': 'unknown',
             'participants': [],
             'message_count': 0
         }
+        
+        # Check for Chrome plugin export formats
+        if '"powered_by": "Claude Exporter' in content:
+            analysis['is_conversation'] = True
+            analysis['conversation_platform'] = 'claude_ai'
+            
+            # Extract dates from metadata
+            import json
+            try:
+                # Try to parse the JSON to get metadata
+                content_data = json.loads(content)
+                if 'metadata' in content_data and 'dates' in content_data['metadata']:
+                    created = content_data['metadata']['dates'].get('created', '')
+                    # Use created date as a conversation ID
+                    analysis['conversation_id'] = f"claude_export_{created.replace('/', '_').replace(' ', '_').replace(':', '')}"
+                elif 'metadata' in content_data and 'title' in content_data['metadata']:
+                    # Use title if dates not available
+                    title = content_data['metadata']['title'][:50]  # Limit length
+                    analysis['conversation_id'] = f"claude_export_{title.replace(' ', '_')}"
+                
+                # Count messages if available
+                if 'messages' in content_data:
+                    analysis['message_count'] = len(content_data.get('messages', []))
+                    analysis['participants'] = ['User', 'Claude']
+                    
+                # Extract conversation URLs if available
+                if 'metadata' in content_data and 'url' in content_data['metadata']:
+                    analysis['conversation_urls'] = [content_data['metadata']['url']]
+                    
+            except json.JSONDecodeError:
+                # Fallback if JSON parsing fails - try to extract from filename
+                filename = metadata.get('filename', '')
+                if 'claude' in filename.lower():
+                    analysis['conversation_id'] = f"claude_export_{filename.split('.')[0][:20]}"
+        
+        elif '"powered_by": "ChatGPT Exporter' in content:
+            analysis['is_conversation'] = True
+            analysis['conversation_platform'] = 'chatgpt'
+            
+            # Extract dates and user info from metadata
+            import json
+            try:
+                # Try to parse the JSON to get metadata
+                content_data = json.loads(content)
+                if 'metadata' in content_data:
+                    # Extract user name if available
+                    user_name = 'User'
+                    if 'user' in content_data['metadata'] and 'name' in content_data['metadata']['user']:
+                        user_name = content_data['metadata']['user']['name']
+                    
+                    # Extract dates
+                    if 'dates' in content_data['metadata']:
+                        created = content_data['metadata']['dates'].get('created', '')
+                        # Use created date as a conversation ID
+                        analysis['conversation_id'] = f"chatgpt_export_{created.replace('/', '_').replace(' ', '_').replace(':', '')}"
+                    elif 'title' in content_data['metadata']:
+                        # Use title if dates not available
+                        title = content_data['metadata']['title'][:50]  # Limit length
+                        analysis['conversation_id'] = f"chatgpt_export_{title.replace(' ', '_')}"
+                    
+                    # Extract conversation URLs if available
+                    if 'url' in content_data['metadata']:
+                        analysis['conversation_urls'] = [content_data['metadata']['url']]
+                    
+                    analysis['participants'] = [user_name, 'ChatGPT']
+                
+                # Count messages if available
+                if 'messages' in content_data:
+                    analysis['message_count'] = len(content_data.get('messages', []))
+            except json.JSONDecodeError:
+                # Fallback if JSON parsing fails - try to extract from filename
+                filename = metadata.get('filename', '')
+                if 'chatgpt' in filename.lower():
+                    analysis['conversation_id'] = f"chatgpt_export_{filename.split('.')[0][:20]}"
         
         # Check for conversation platforms
         for platform, pattern in [('claude_ai', self.conversation_patterns['claude_ai']),
                                  ('chatgpt', self.conversation_patterns['chatgpt'])]:
             if pattern.search(content) or pattern.search(metadata.get('filename', '')):
-                analysis['conversation_platform'] = platform
+                if analysis['conversation_platform'] == 'unknown':  # Don't override if already detected
+                    analysis['conversation_platform'] = platform
                 analysis['is_conversation'] = True
                 break
         
@@ -217,6 +292,10 @@ class EnhancedSystemIntegration:
         # Priority classification
         if basic_analysis.get('content_type') == 'AI conversation export':
             return 'ai_conversation'
+        elif '"powered_by": "Claude Exporter' in content:
+            return 'ai_conversation_chrome_export'
+        elif '"powered_by": "ChatGPT Exporter' in content:
+            return 'ai_conversation_chrome_export'
         elif 'conversation' in content_lower or 'chat' in content_lower:
             return 'conversation'
         elif content.strip().startswith('{') or content.strip().startswith('['):
@@ -333,18 +412,18 @@ class EnhancedSystemIntegration:
                         chunk_id = f"{float_id}_{collection_type}_chunk_{i}"
                         
                         chunk_metadata = {
-                            'float_id': float_id,
-                            'original_filename': metadata.get('filename', 'unknown'),
+                            'float_id': float_id or 'unknown',
+                            'original_filename': metadata.get('filename') or 'unknown',
                             'chunk_index': i,
                             'total_chunks': len(chunks),
-                            'collection_type': collection_type,
-                            'tripartite_domain': collection_type,
-                            'content_classification': enhanced_analysis.get('content_classification', 'unknown'),
-                            'is_conversation': enhanced_analysis.get('is_conversation', False),
-                            'conversation_platform': enhanced_analysis.get('conversation_platform', 'unknown'),
-                            'signal_density': enhanced_analysis.get('signal_density', 0),
-                            'processed_at': file_analysis.get('processed_at', 'unknown'),
-                            'enhanced_routing': True
+                            'collection_type': collection_type or 'unknown',
+                            'tripartite_domain': collection_type or 'unknown',
+                            'content_classification': enhanced_analysis.get('content_classification') or 'unknown',
+                            'is_conversation': str(enhanced_analysis.get('is_conversation', False)),
+                            'conversation_platform': enhanced_analysis.get('conversation_platform') or 'unknown',
+                            'signal_density': float(enhanced_analysis.get('signal_density', 0.0)),
+                            'processed_at': file_analysis.get('processed_at') or datetime.now().isoformat(),
+                            'enhanced_routing': 'true'
                         }
                         
                         collection.add(
@@ -455,7 +534,7 @@ class EnhancedSystemIntegration:
         # Create YAML frontmatter
         frontmatter = {
             'float_id': file_analysis.get('float_id'),
-            'conversation_id': enhanced_analysis.get('conversation_id'),
+            'conversation_id': enhanced_analysis.get('conversation_id', 'unknown'),
             'platform': enhanced_analysis.get('conversation_platform'),
             'participants': enhanced_analysis.get('participants'),
             'message_count': enhanced_analysis.get('message_count', 0),

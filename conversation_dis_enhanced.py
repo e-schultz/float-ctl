@@ -195,14 +195,14 @@ class ConversationDisEnhanced:
             })
         
         # Calculate statistics
-        message_lengths = [turn['length'] for turn in turns]
+        message_lengths = [turn.get('length', 0) for turn in turns if isinstance(turn, dict)]
         speaker_stats = {}
         for speaker in speakers:
-            speaker_turns = [turn for turn in turns if turn['speaker'] == speaker]
+            speaker_turns = [turn for turn in turns if isinstance(turn, dict) and turn.get('speaker') == speaker]
             speaker_stats[speaker] = {
                 'turn_count': len(speaker_turns),
-                'avg_length': sum(turn['length'] for turn in speaker_turns) / len(speaker_turns) if speaker_turns else 0,
-                'total_length': sum(turn['length'] for turn in speaker_turns)
+                'avg_length': sum(turn.get('length', 0) for turn in speaker_turns) / len(speaker_turns) if speaker_turns else 0,
+                'total_length': sum(turn.get('length', 0) for turn in speaker_turns)
             }
         
         return {
@@ -375,21 +375,25 @@ class ConversationDisEnhanced:
         
         # Insights from FLOAT signals
         for signal in analysis.get('float_signals', []):
-            if signal['type'] in ['highlight', 'ctx']:
-                insights.append(signal['content'])
+            if isinstance(signal, dict) and signal.get('type') in ['highlight', 'ctx']:
+                content = signal.get('content', '')
+                if content:
+                    insights.append(content)
         
         # Insights from questions and answers
         turns = analysis.get('conversation_turns', [])
         for i, turn in enumerate(turns):
-            if turn['speaker'] in ['human', 'user'] and '?' in turn['content']:
+            if not isinstance(turn, dict):
+                continue
+            if turn.get('speaker') in ['human', 'user'] and '?' in turn.get('content', ''):
                 # Look for the AI response
-                if i + 1 < len(turns) and turns[i + 1]['speaker'] in ['claude', 'assistant', 'chatgpt']:
-                    response = turns[i + 1]['content']
+                if i + 1 < len(turns) and isinstance(turns[i + 1], dict) and turns[i + 1].get('speaker') in ['claude', 'assistant', 'chatgpt']:
+                    response = turns[i + 1].get('content', '')
                     if len(response) > 100:  # Substantial response
                         # Extract first sentence as insight
-                        first_sentence = response.split('.')[0]
-                        if len(first_sentence) > 20:
-                            insights.append(first_sentence.strip())
+                        sentences = response.split('.')
+                        if sentences and len(sentences[0]) > 20:
+                            insights.append(sentences[0].strip())
         
         return insights[:5]  # Limit to top 5 insights
     
@@ -497,7 +501,7 @@ class ConversationDisEnhanced:
 ### Related Conversations
 ```dataview
 LIST FROM "FLOAT.conversations"
-WHERE contains(file.frontmatter.topics, "{enhanced_analysis.get('topics', [''])[0] if enhanced_analysis.get('topics') else ''}")
+WHERE contains(file.frontmatter.topics, "{enhanced_analysis.get('topics', ['unknown'])[0] if enhanced_analysis.get('topics') and len(enhanced_analysis.get('topics', [])) > 0 else 'unknown'}")
 AND file.name != this.file.name
 SORT file.ctime DESC
 LIMIT 5
@@ -507,7 +511,7 @@ LIMIT 5
 {chr(10).join([f"- `{ref}`" for ref in conversation_analysis.get('file_references', [])])}
 
 ### External Links
-{chr(10).join([f"- [{link.get('title', 'Link')}]({link.get('url', '#')})" for link in cross_refs.get('conversation_links', [])])}
+{chr(10).join([f"- [{link.get('title', 'Link') if link and isinstance(link, dict) else 'Link'}]({link.get('url', '#') if link and isinstance(link, dict) else '#'})" for link in cross_refs.get('conversation_links', []) if link and isinstance(link, dict)])}
 
 ## Processing Details
 - **Float ID**: `{file_analysis.get('float_id')}`
@@ -580,10 +584,12 @@ await tp.file.create_new(followUpTitle, template);
         
         analysis_text = ""
         for speaker, stats in speaker_stats.items():
+            if not isinstance(stats, dict):
+                continue
             analysis_text += f"### {speaker.title()}\n"
-            analysis_text += f"- **Turns**: {stats['turn_count']}\n"
-            analysis_text += f"- **Average Length**: {stats['avg_length']:.0f} characters\n"
-            analysis_text += f"- **Total Content**: {stats['total_length']:,} characters\n\n"
+            analysis_text += f"- **Turns**: {stats.get('turn_count', 0)}\n"
+            analysis_text += f"- **Average Length**: {stats.get('avg_length', 0):.0f} characters\n"
+            analysis_text += f"- **Total Content**: {stats.get('total_length', 0):,} characters\n\n"
         
         return analysis_text
     
@@ -596,11 +602,13 @@ await tp.file.create_new(followUpTitle, template);
         
         languages = {}
         for block in code_blocks:
-            lang = block['language']
+            if not isinstance(block, dict):
+                continue
+            lang = block.get('language', 'unknown')
             if lang not in languages:
                 languages[lang] = {'count': 0, 'total_length': 0}
             languages[lang]['count'] += 1
-            languages[lang]['total_length'] += block['length']
+            languages[lang]['total_length'] += block.get('length', 0)
         
         lang_analysis = ""
         for lang, stats in languages.items():
@@ -620,8 +628,10 @@ await tp.file.create_new(followUpTitle, template);
         by_category = {}
         
         for signal in signals:
-            signal_type = signal['type']
-            category = signal['category']
+            if not isinstance(signal, dict):
+                continue
+            signal_type = signal.get('type', 'unknown')
+            category = signal.get('category', 'unknown')
             
             if signal_type not in by_type:
                 by_type[signal_type] = []
@@ -650,12 +660,16 @@ await tp.file.create_new(followUpTitle, template);
         
         flow_analysis = ""
         for item in flow[:10]:  # Limit to first 10 sections
-            flow_analysis += f"- **Section {item['section']}**: {item['type'].replace('_', ' ').title()}"
-            if item['has_code']:
+            if not isinstance(item, dict):
+                continue
+            section = item.get('section', 'Unknown')
+            item_type = item.get('type', 'unknown').replace('_', ' ').title()
+            flow_analysis += f"- **Section {section}**: {item_type}"
+            if item.get('has_code'):
                 flow_analysis += " (with code)"
-            if item['has_questions']:
+            if item.get('has_questions'):
                 flow_analysis += " (with questions)"
-            if item['has_float_signals']:
+            if item.get('has_float_signals'):
                 flow_analysis += " (with signals)"
             flow_analysis += "\\n"
         
