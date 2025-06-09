@@ -33,6 +33,7 @@ class FloatConfig:
             'vault_path': os.getenv('FLOAT_VAULT_PATH'),
             'chroma_data_path': os.getenv('FLOAT_CHROMA_PATH'),
             'dropzone_path': os.getenv('FLOAT_DROPZONE_PATH'),
+            'log_dir': os.getenv('FLOAT_LOG_DIR'),
             'ollama_url': os.getenv('OLLAMA_URL'),
             'enable_ollama': os.getenv('FLOAT_ENABLE_OLLAMA', '').lower() == 'true'
         }
@@ -42,7 +43,7 @@ class FloatConfig:
                 config[key] = value
         
         # Ensure paths are expanded
-        for key in ['vault_path', 'chroma_data_path', 'dropzone_path', 'conversation_dis_path']:
+        for key in ['vault_path', 'chroma_data_path', 'dropzone_path', 'conversation_dis_path', 'log_dir']:
             if key in config and config[key]:
                 config[key] = str(Path(config[key]).expanduser())
         
@@ -69,7 +70,8 @@ class FloatConfig:
             'chunk_size': 2000,
             'chunk_overlap': 200,
             'log_level': 'INFO',
-            'log_file': None,  # Will default to dropzone/.logs/float_daemon.log
+            'log_dir': None,   # Will default to dropzone/.logs/
+            'log_file': None,  # Will default to log_dir/float_daemon.log
             'enable_performance_monitoring': True,
             'enable_health_checks': True,
             'health_check_interval': 60,  # seconds

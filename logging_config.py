@@ -95,12 +95,17 @@ def setup_logging(config: Dict) -> logging.Logger:
     
     log_level = config.get('log_level', 'INFO').upper()
     log_file = config.get('log_file')
+    log_dir_config = config.get('log_dir')
     dropzone_path = Path(config.get('dropzone_path', '.'))
     
-    # Default log file location
+    # Default log directory and file location
     if not log_file:
-        log_dir = dropzone_path / '.logs'
-        log_dir.mkdir(exist_ok=True)
+        if log_dir_config:
+            log_dir = Path(log_dir_config)
+        else:
+            log_dir = dropzone_path / '.logs'
+        
+        log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / 'float_daemon.log'
     
     # Create root logger

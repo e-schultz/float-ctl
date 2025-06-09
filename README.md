@@ -50,7 +50,19 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
    pip install watchdog chromadb pathlib python-magic PyPDF2 mammoth
    ```
 
-2. **Ollama** (optional but recommended):
+2. **libmagic** (for enhanced file type detection):
+   ```bash
+   # macOS
+   brew install libmagic
+   
+   # Ubuntu/Debian
+   sudo apt-get install libmagic1
+   
+   # CentOS/RHEL
+   sudo yum install file-devel
+   ```
+
+3. **Ollama** (optional but recommended):
    ```bash
    # Install Ollama
    curl -fsSL https://ollama.ai/install.sh | sh
@@ -59,7 +71,7 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
    ollama pull llama3.1:8b
    ```
 
-3. **Obsidian** with the following plugins:
+4. **Obsidian** with the following plugins:
    - Templater (for .dis file templates)
    - Dataview (for dynamic queries)
 
@@ -211,6 +223,7 @@ Create with: `python streamlined_float_daemon.py --create-config config.json`
 ```json
 {
   "log_level": "INFO",
+  "log_dir": null,
   "log_file": null,
   "enable_performance_monitoring": true,
   "enable_health_checks": true,
@@ -225,6 +238,7 @@ Override config with environment variables:
 export FLOAT_VAULT_PATH=~/my-vault
 export FLOAT_CHROMA_PATH=~/my-chroma
 export FLOAT_DROPZONE_PATH=~/my-dropzone
+export FLOAT_LOG_DIR=~/my-logs
 export OLLAMA_URL=http://localhost:11434
 export FLOAT_ENABLE_OLLAMA=true
 ```
