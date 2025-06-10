@@ -567,9 +567,62 @@ Summary:"""
             self.logger.warning(f"Failed to get vault activity for {date_str}: {e}")
             return {'date': date_str, 'total_activity': 0}
     
-    # Include all other methods from the original ComprehensiveDailyContext
-    # (extract_daily_note_content, etc.)
-    # These remain the same but now work with the enhanced system
+    def extract_daily_note_content(self, date_str: str) -> Dict:
+        """Extract content from daily note for the specified date"""
+        try:
+            daily_note_path = self.vault_path / f"{date_str}.md"
+            if daily_note_path.exists():
+                with open(daily_note_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return {
+                    'content': content,
+                    'word_count': len(content.split()),
+                    'has_content': len(content.strip()) > 0,
+                    'path': str(daily_note_path)
+                }
+            else:
+                return {
+                    'content': '',
+                    'word_count': 0,
+                    'has_content': False,
+                    'path': str(daily_note_path)
+                }
+        except Exception as e:
+            self.logger.warning(f"Failed to extract daily note content for {date_str}: {e}")
+            return {
+                'content': '',
+                'word_count': 0,
+                'has_content': False,
+                'path': 'unknown',
+                'error': str(e)
+            }
+    
+    def cross_reference_conversations_with_notes(self, conversations: List[Dict], daily_content: Dict) -> Dict:
+        """Cross-reference conversations with daily note content"""
+        try:
+            cross_refs = {
+                'conversation_mentions': [],
+                'shared_topics': [],
+                'temporal_connections': []
+            }
+            
+            daily_text = daily_content.get('content', '').lower()
+            
+            for conv in conversations:
+                # Look for conversation references in daily notes
+                if conv.get('conversation_id', '') in daily_text:
+                    cross_refs['conversation_mentions'].append(conv.get('conversation_id'))
+                
+                # Look for shared topics
+                conv_topics = conv.get('topics', [])
+                for topic in conv_topics:
+                    if topic.lower() in daily_text:
+                        cross_refs['shared_topics'].append(topic)
+            
+            return cross_refs
+        except Exception as e:
+            self.logger.warning(f"Failed to cross-reference conversations with notes: {e}")
+            return {'conversation_mentions': [], 'shared_topics': [], 'temporal_connections': []}
 
 # Usage example
 if __name__ == "__main__":

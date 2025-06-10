@@ -411,18 +411,19 @@ class EnhancedSystemIntegration:
                     for i, chunk in enumerate(chunks):
                         chunk_id = f"{float_id}_{collection_type}_chunk_{i}"
                         
+                        # Ensure all metadata values are valid (no None values)
                         chunk_metadata = {
-                            'float_id': float_id or 'unknown',
-                            'original_filename': metadata.get('filename') or 'unknown',
-                            'chunk_index': i,
-                            'total_chunks': len(chunks),
-                            'collection_type': collection_type or 'unknown',
-                            'tripartite_domain': collection_type or 'unknown',
-                            'content_classification': enhanced_analysis.get('content_classification') or 'unknown',
+                            'float_id': str(float_id or 'unknown'),
+                            'original_filename': str(metadata.get('filename') or 'unknown'),
+                            'chunk_index': int(i),
+                            'total_chunks': int(len(chunks)),
+                            'collection_type': str(collection_type or 'unknown'),
+                            'tripartite_domain': str(collection_type or 'unknown'),
+                            'content_classification': str(enhanced_analysis.get('content_classification') or 'unknown'),
                             'is_conversation': str(enhanced_analysis.get('is_conversation', False)),
-                            'conversation_platform': enhanced_analysis.get('conversation_platform') or 'unknown',
+                            'conversation_platform': str(enhanced_analysis.get('conversation_platform') or 'unknown'),
                             'signal_density': float(enhanced_analysis.get('signal_density', 0.0)),
-                            'processed_at': file_analysis.get('processed_at') or datetime.now().isoformat(),
+                            'processed_at': str(file_analysis.get('processed_at') or datetime.now().isoformat()),
                             'enhanced_routing': 'true'
                         }
                         
@@ -576,7 +577,7 @@ This content has been routed to the following collections:
 ## Cross-References
 
 ### Conversation Links
-{chr(10).join([f"- [{link.get('title', 'Conversation')}]({link['url']})" for link in cross_refs.get('conversation_links', [])])}
+{chr(10).join([f"- [{link.get('title', 'Conversation')}]({link.get('url', '#')})" for link in cross_refs.get('conversation_links', []) if link and isinstance(link, dict)])}
 
 ### Topic Connections
 {', '.join(cross_refs.get('topic_connections', [])[:10])}

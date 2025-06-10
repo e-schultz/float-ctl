@@ -519,42 +519,22 @@ LIMIT 5
 - **Processed**: {file_analysis.get('processed_at', 'Unknown')}
 - **File Size**: {metadata.get('size_bytes', 0):,} bytes
 
-## Templater Quick Actions
+## Quick Actions
 
 ### Extract Code
-```javascript
-<%*
-// Extract all code blocks for reference
-const content = tp.file.content;
-const codeBlocks = content.match(/```[\\s\\S]*?```/g) || [];
-const extractedCode = codeBlocks.join('\\n\\n');
-await tp.file.create_new("Extracted Code - " + tp.file.title, extractedCode, "Code Extracts");
-%>
-```
+Use Templater to extract all code blocks from this conversation:
+- Command: "Templater: Create new note from template"
+- Template: Code extraction template
 
 ### Create Follow-up Note
-```javascript
-<%*
-const followUpTitle = `Follow-up - ${tp.file.title}`;
-const template = `# Follow-up Actions
+Create a follow-up note based on this conversation:
+- **Title**: Follow-up - {enhanced_analysis.get('conversation_id', 'Unknown')}
+- **Template**: Action items and research topics template
 
-Based on conversation: [[${tp.file.title}]]
-
-## Action Items
-- [ ] 
-
-## Questions to Explore
-- 
-
-## Code to Implement
-- 
-
-## Research Topics
-- 
-`;
-await tp.file.create_new(followUpTitle, template);
-%>
-```
+### Related Actions
+- **Search Similar**: Find conversations with similar topics
+- **Export Data**: Export conversation metadata and analysis
+- **Create Summary**: Generate executive summary of key points
 
 ---
 
