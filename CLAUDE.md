@@ -33,6 +33,12 @@ python float_dis_template_system.py
 
 # Test comprehensive context with Ollama
 python enhanced_comprehensive_context_ollama.py
+
+# Test enhanced pattern detection
+python enhanced_pattern_detector.py
+
+# Test enhanced integration system
+python enhanced_integration.py
 ```
 
 ## Architecture Overview
@@ -41,46 +47,95 @@ This is a FLOAT (Feed-Log-Offload-Archive-Trunk) knowledge management system tha
 
 ### Key Components
 
-1. **Streamlined Daemon (`streamlined_float_daemon.py`)**: Main entry point that watches the dropzone folder and orchestrates processing.
+1. **Streamlined Daemon (`streamlined_float_daemon.py`)**: Main entry point that watches the dropzone folder and orchestrates basic file processing. Simplified to focus on monitoring and delegation.
 
-2. **Enhanced Comprehensive Context (`enhanced_comprehensive_context_ollama.py`)**: Aggregates daily context from conversations and vault activity, generates conversation .dis files, and provides cross-referencing capabilities. Includes Ollama integration for intelligent summarization.
+2. **Enhanced Integration System (`enhanced_integration.py`)**: Central hub for sophisticated content analysis, tripartite routing, and cross-system coordination. Bridges daemon with specialized processing systems.
 
-3. **Ollama Float Summarizer (`ollama_enhanced_float_summarizer.py`)**: Handles hierarchical multi-chunk summarization using local Ollama models. Intelligently chunks content based on type (conversation, document, etc.).
+3. **Enhanced Pattern Detector (`enhanced_pattern_detector.py`)**: Comprehensive FLOAT signal analysis with 40+ pattern types including core signals, extended patterns, persona annotations, and platform integration detection.
 
-4. **Float .dis Generator (`float_dis_template_system.py`)**: Creates rich `.float_dis.md` files with YAML frontmatter and Templater.js templates for Obsidian integration.
+4. **Enhanced Comprehensive Context (`enhanced_comprehensive_context_ollama.py`)**: Aggregates daily context from conversations and vault activity, generates conversation .dis files, and provides cross-referencing capabilities. Includes Ollama integration for intelligent summarization.
+
+5. **Ollama Float Summarizer (`ollama_enhanced_float_summarizer.py`)**: Handles hierarchical multi-chunk summarization using local Ollama models. Intelligently chunks content based on type (conversation, document, etc.).
+
+6. **Float .dis Generator (`float_dis_template_system.py`)**: Creates rich `.float_dis.md` files with comprehensive YAML frontmatter, enhanced auto-tagging, and Templater.js templates for Obsidian integration.
 
 ### Data Flow
 
-1. Files are dropped into the dropzone folder
-2. Daemon detects new files and extracts content/metadata
-3. Content is analyzed for FLOAT patterns (ctx::, highlight::, float.dispatch)
-4. Ollama generates intelligent summaries (if enabled)
-5. Content is chunked and stored in ChromaDB collections
-6. A `.float_dis.md` file is generated with metadata and Obsidian templates
-7. Daily context is updated to include the new content
+1. **File Detection**: Daemon monitors dropzone folder for new files
+2. **Basic Processing**: Daemon extracts content/metadata and performs initial analysis
+3. **Enhanced Integration**: Sophisticated analysis via Enhanced Integration System:
+   - **Pattern Analysis**: 40+ FLOAT patterns detected via Enhanced Pattern Detector
+   - **Content Classification**: Tripartite domain classification (Concept/Framework/Metaphor)
+   - **Signal Density**: Advanced signal analysis with threshold detection
+   - **Platform Integration**: Detection of build tools and external service references
+4. **Intelligent Routing**: Content routed to appropriate tripartite collections based on analysis
+5. **Ollama Summarization**: AI-powered summaries generated (if enabled)
+6. **Storage Optimization**: Domain-specific chunking strategies applied
+7. **Rich .dis Generation**: Comprehensive `.float_dis.md` files with 30+ metadata fields
+8. **Cross-Reference**: Vault and collection cross-references generated
+9. **Daily Context**: Enhanced daily summaries updated with new content
 
-### FLOAT Pattern Detection
+### Enhanced FLOAT Pattern Detection
 
-The system recognizes specific FLOAT methodology markers:
+The Enhanced Pattern Detector recognizes 40+ sophisticated FLOAT methodology markers:
+
+**Core FLOAT Patterns:**
 - `ctx::` - Context markers for temporal/situational notes
 - `highlight::` - Important insights or key points
+- `signal::` - Key information and markers
 - `float.dispatch` - Dispatch objects for topic branching
 - Conversation links from Claude.ai or ChatGPT
 
+**Extended FLOAT Patterns:**
+- `expandOn::` - Areas for further exploration
+- `relatesTo::` - Cross-references to related concepts
+- `rememberWhen::` - Temporal memory anchors
+- `storyTime::` - Narrative and experiential content
+- `echoCopy::` - Content echoing and reinforcement
+
+**Persona Annotation System:**
+- `[sysop::]` - System operator perspectives
+- `[any::]` - General annotations
+- `[lf1m::]` - Looking for one more (team building)
+- `[qtb::]` - Question the basis (critical thinking)
+- `[karen::]` - Customer/user perspective
+- `[little-fucker::]` - Debugging and problem-solving
+
+**Platform Integration Detection:**
+- lovable.dev, v0.dev, magicpatterns.com references
+- GitHub repositories and issue tracking
+- Build tools and deployment platforms
+- External service integrations
+
+**BBS Heritage Patterns:**
+- float.dis, float.diis file references
+- file_id.diz content detection
+- Legacy system integration markers
+
 ### ChromaDB Collections
 
-- `float_tripartite_v2_concept` - Conceptual domain storage
-- `float_tripartite_v2_framework` - Framework domain storage
-- `float_tripartite_v2_metaphor` - Metaphor domain storage
-- `float_dropzone_comprehensive` - General dropzone ingestion
+**Tripartite Collections (Enhanced Routing):**
+- `float_tripartite_v2_concept` - Conceptual domain storage (precision-optimized: 600/1200 chars)
+- `float_tripartite_v2_framework` - Framework domain storage (structure-optimized: 900/1800 chars)
+- `float_tripartite_v2_metaphor` - Metaphor domain storage (resonance-optimized: 800/1600 chars)
+
+**General Collections:**
+- `float_dropzone_comprehensive` - General dropzone ingestion (fallback collection)
 - `FLOAT.conversations` - Conversation-specific .dis files
+
+**Enhanced Features:**
+- Intelligent routing based on content analysis and confidence scores
+- Domain-specific chunking strategies for optimal retrieval
+- Rich metadata with 30+ fields for advanced querying
+- Multi-domain routing for complex content
+- Signal-preserving chunking for high-density FLOAT content
 
 ## Configuration
 
 Key paths are configurable via command-line arguments or config file:
-- Vault path: Default `/Users/evan/vault`
+- Vault path: Default `/Users/evan/Documents/FLOAT.SHACK`
 - Chroma data path: Default `/Users/evan/github/chroma-data`
-- Dropzone path: Default `/Users/evan/float-dropzone`
+- Dropzone path: Default `/Users/evan/github/processing-vault/src/float-dropzone`
 - Log directory: Default `{dropzone_path}/.logs` (can be set via `log_dir` config option)
 - Conversation .dis path: Default `{vault_path}/FLOAT.conversations`
 
@@ -98,11 +153,12 @@ Environment variables:
 ## File Structure
 
 Current active files in the system:
-- `streamlined_float_daemon.py` - Main daemon (entry point)
+- `streamlined_float_daemon.py` - Main daemon (entry point, simplified)
+- `enhanced_integration.py` - Enhanced ecosystem integration (central hub)
+- `enhanced_pattern_detector.py` - Comprehensive pattern analysis (40+ patterns)
 - `enhanced_comprehensive_context_ollama.py` - Context aggregation with Ollama
 - `ollama_enhanced_float_summarizer.py` - Hierarchical summarization
-- `float_dis_template_system.py` - .dis file generation (fixed Templater syntax)
-- `enhanced_integration.py` - Enhanced ecosystem integration  
+- `float_dis_template_system.py` - .dis file generation (enhanced metadata)
 - `conversation_dis_enhanced.py` - Advanced conversation analysis
 - `cross_reference_system.py` - Vault cross-referencing
 - `config.py` - Configuration management
@@ -111,6 +167,35 @@ Current active files in the system:
 - `performance_monitor.py` - Performance tracking
 - `health_monitor.py` - System health monitoring
 - `float-config.json` - Configuration file
+
+## Architecture v2.0 Improvements
+
+### Clean Separation of Concerns
+- **Daemon**: Simplified to focus on file monitoring and basic processing
+- **Enhanced Integration**: Central hub for sophisticated analysis and routing
+- **Pattern Detector**: Dedicated system for comprehensive FLOAT signal analysis
+- **Specialized Systems**: Cross-references, conversation processing, .dis generation
+
+### Code Quality Improvements
+- **Removed 400+ lines** of redundant and duplicate code
+- **Eliminated dead imports** for non-existent fallback modules
+- **Consolidated logic** into appropriate specialized systems
+- **Single source of truth** for pattern detection and tripartite routing
+
+### Enhanced Capabilities
+- **40+ pattern types** vs. previous basic detection
+- **Intelligent tripartite routing** with confidence scoring
+- **Domain-specific chunking** strategies for optimal storage
+- **Rich metadata generation** with 30+ fields for enhanced querying
+- **Platform integration detection** for modern development workflows
+
+
+## documentation
+
+- ObsidianMD dataview documentation @docs/dataview.md
+- ObsidianMD templater documentation @docs/templater.md
+- Chroma documentation @docs/chroma.md
+- Nushell documentation @docs/nushell.md
 
 ## Troubleshooting
 
@@ -126,7 +211,9 @@ sudo apt-get install libmagic1  # Ubuntu
 **Import errors on daemon startup:**
 - Ensure all files are in the same directory
 - Check that `streamlined_float_daemon.py` is the entry point
-- Verify python path includes the current directory
+- Verify `enhanced_pattern_detector.py` is available
+- Verify `enhanced_integration.py` is available
+- Check python path includes the current directory
 
 **Logging/permission errors:**
 - Check that the configured `log_dir` path exists and is writable
@@ -138,7 +225,16 @@ sudo apt-get install libmagic1  # Ubuntu
 - .dis files now generate clean static content
 - No mixed EJS/Templater syntax
 
+
 **Missing dependencies:**
 - All required modules are in the local directory
+- Enhanced Pattern Detector requires the comprehensive pattern analysis module
+- Enhanced Integration System requires all specialized components
 - No external pip installs needed beyond the core dependencies
 - Check that Ollama is running if enabled
+
+**Enhanced Integration Issues:**
+- If pattern detection fails, check `enhanced_pattern_detector.py` availability
+- Tripartite routing requires Enhanced Integration System to be properly initialized
+- Cross-reference generation requires the dedicated CrossReferenceSystem
+- Fallback modes available when enhanced systems are unavailable

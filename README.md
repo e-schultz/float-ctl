@@ -32,14 +32,15 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 ### Key Components
 
 1. **Streamlined Daemon** (`streamlined_float_daemon.py`) - Main file watcher and orchestrator
-2. **Enhanced Integration** (`enhanced_integration.py`) - Deep ecosystem integration
-3. **Configuration System** (`config.py`) - Centralized configuration management
-4. **Error Recovery** (`error_recovery.py`) - Robust error handling and retry logic
-5. **Performance Monitoring** (`performance_monitor.py`) - Real-time performance tracking
-6. **Health Monitoring** (`health_monitor.py`) - System health checks
-7. **Cross-Reference System** (`cross_reference_system.py`) - Bidirectional vault linking
-8. **Conversation Analysis** (`conversation_dis_enhanced.py`) - Advanced conversation processing
-9. **Logging System** (`logging_config.py`) - Structured logging with rotation
+2. **Enhanced Integration** (`enhanced_integration.py`) - Deep ecosystem integration with sophisticated analysis
+3. **Enhanced Pattern Detector** (`enhanced_pattern_detector.py`) - Comprehensive FLOAT signal analysis (40+ pattern types)
+4. **Configuration System** (`config.py`) - Centralized configuration management
+5. **Error Recovery** (`error_recovery.py`) - Robust error handling and retry logic
+6. **Performance Monitoring** (`performance_monitor.py`) - Real-time performance tracking
+7. **Health Monitoring** (`health_monitor.py`) - System health checks
+8. **Cross-Reference System** (`cross_reference_system.py`) - Bidirectional vault linking
+9. **Conversation Analysis** (`conversation_dis_enhanced.py`) - Advanced conversation processing
+10. **Logging System** (`logging_config.py`) - Structured logging with rotation
 
 ## Installation
 
@@ -159,9 +160,27 @@ python streamlined_float_daemon.py ~/float-dropzone \
 
 Enhance your content with FLOAT methodology markers:
 
+**Core Patterns:**
 - `ctx::temporal context` - Temporal/situational notes
 - `highlight::important insight` - Key insights and highlights
+- `signal::key information` - Important signals and markers
 - `float.dispatch(topic)` - Topic branching and dispatch objects
+
+**Extended Patterns:**
+- `expandOn::topic` - Areas for further exploration
+- `relatesTo::concept` - Cross-references to related ideas
+- `rememberWhen::context` - Temporal memory anchors
+- `storyTime::narrative` - Narrative and experiential content
+
+**Persona Annotations:**
+- `[sysop::admin comment]` - System operator perspectives
+- `[any::general note]` - General annotations
+- Custom persona markers for context-specific insights
+
+**Platform Integration:**
+- Automatic detection of lovable.dev, v0.dev, magicpatterns.com references
+- GitHub repository and issue linking
+- Build tool and deployment platform recognition
 
 ### Example Workflow
 
@@ -245,11 +264,25 @@ export FLOAT_ENABLE_OLLAMA=true
 
 ### Tripartite Collections
 
-Content is intelligently routed to specialized collections:
+Content is intelligently routed to specialized collections using enhanced pattern analysis:
 
-- **Concept Collection** (`float_tripartite_v2_concept`): Definitions, theories, principles
-- **Framework Collection** (`float_tripartite_v2_framework`): Processes, methods, systems
-- **Metaphor Collection** (`float_tripartite_v2_metaphor`): Analogies, experiences, intuitions
+- **Concept Collection** (`float_tripartite_v2_concept`): Definitions, theories, principles, abstract ideas
+  - Optimized for precision (600/1200 char chunks)
+  - High-confidence classification for conceptual content
+  
+- **Framework Collection** (`float_tripartite_v2_framework`): Processes, methods, systems, workflows
+  - Optimized for structure (900/1800 char chunks)
+  - Platform integration and build tool references
+  
+- **Metaphor Collection** (`float_tripartite_v2_metaphor`): Analogies, experiences, intuitions, narratives
+  - Optimized for resonance (800/1600 char chunks)
+  - Persona annotations and experiential content
+
+**Enhanced Routing Features:**
+- Automatic domain classification with confidence scoring
+- Multi-domain routing for complex content
+- High-signal content distributed across all domains
+- Content complexity assessment for optimal chunking
 
 ## Monitoring and Health
 
