@@ -1,24 +1,43 @@
 # FLOAT Ecosystem Changelog
 
-## Version 2.0.0 - Enhanced Integration & Architecture Cleanup
+## Version 2.1.0 - Enhanced Integration System Complete ✅
 **Release Date:** 2025-06-10
 
-### 🚀 Major Features
+### 🚀 Major Features Completed
+
+#### Special Pattern Collections with Dual Routing (SCH-61)
+- **NEW**: `float.dispatch` patterns → `float_dispatch_bay` collection (104 items verified)
+- **NEW**: `float.rfc` patterns → `float_rfc` collection (3 items verified)  
+- **NEW**: `echoCopy::` patterns → `float_echoCopy` collection (8 items verified)
+- **ENHANCED**: Dual routing system - content routes to BOTH tripartite AND special collections
+- **FEATURE**: Pattern-specific metadata enhancement for each special collection type
+
+#### Temporal Query System (SCH-61)
+- **NEW**: Date parsing from multiple sources (filenames, content, conversation metadata)
+- **NEW**: Normalized temporal metadata (YYYY-MM-DD format, day of week, timestamps)
+- **NEW**: `query_conversations_by_date()` method for efficient date-based searches
+- **NEW**: `get_conversations_for_date_range()` method for date range queries
+- **ENHANCED**: Cross-collection temporal search across tripartite and special collections
+- **VERIFIED**: Successfully queries conversations by date (15 results for 2025-06-10)
 
 #### Enhanced Pattern Detection Integration (SCH-61)
-- **Integrated sophisticated pattern detection** from tripartite chunker into general file processing
-- **Added 40+ pattern types** including enhanced FLOAT signals, persona annotations, and platform integration markers
-- **Implemented domain-aware content classification** using tripartite methodology (Concept, Framework, Metaphor)
-- **Enhanced signal density analysis** with intelligent threshold detection for high-priority content
+- **INTEGRATED**: Sophisticated pattern detection from tripartite chunker into general file processing
+- **ADDED**: 40+ pattern types including enhanced FLOAT signals, persona annotations, and platform integration markers
+- **IMPLEMENTED**: Domain-aware content classification using tripartite methodology (Concept, Framework, Metaphor)
+- **ENHANCED**: Signal density analysis with intelligent threshold detection for high-priority content
+- **VERIFIED**: Pattern detection working with test content (4 core signals detected)
 
-#### Advanced Tripartite Routing System
-- **Intelligent content routing** to specialized ChromaDB collections based on enhanced analysis
-- **Domain-specific chunking strategies** optimized for different content types:
+#### Advanced Tripartite Routing System (SCH-61)
+- **VERIFIED**: Intelligent content routing to specialized ChromaDB collections:
+  - `float_tripartite_v2_concept`: 7,682 items  
+  - `float_tripartite_v2_framework`: 15,317 items
+  - `float_tripartite_v2_metaphor`: 16,135 items
+- **ENHANCED**: Domain-specific chunking strategies optimized for different content types:
   - Concept domain: 600/1200 char targets (precision-focused)
   - Framework domain: 900/1800 char targets (structure-aware)
   - Metaphor domain: 800/1600 char targets (resonance-optimized)
-- **Signal-preserving chunking** for high-density FLOAT content
-- **Structure-aware chunking** for complex documents with multiple headings
+- **IMPLEMENTED**: Signal-preserving chunking for high-density FLOAT content
+- **ADDED**: Structure-aware chunking for complex documents with multiple headings
 
 #### Enhanced Conversation Processing
 - **Sophisticated conversation detection** for Claude.ai and ChatGPT exports

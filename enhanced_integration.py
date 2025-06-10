@@ -38,6 +38,9 @@ class EnhancedSystemIntegration:
         # Initialize enhanced conversation dis generator
         self._initialize_conversation_dis_system()
         
+        # Initialize temporal query capabilities
+        self._initialize_temporal_features()
+        
         # Conversation detection patterns
         self._initialize_conversation_patterns()
     
@@ -125,6 +128,9 @@ class EnhancedSystemIntegration:
         
         # Step 4: Tripartite collection routing
         self._route_to_tripartite_collections(file_analysis, enhanced_analysis)
+        
+        # Step 4.5: Special pattern collection routing
+        self._route_to_special_pattern_collections(file_analysis, enhanced_analysis)
         
         # Step 5: Cross-reference generation
         if self.cross_ref_system:
@@ -607,6 +613,11 @@ class EnhancedSystemIntegration:
                             'enhanced_routing': 'true'
                         }
                         
+                        # Add temporal metadata if enabled
+                        chunk_metadata = self.enhance_metadata_with_temporal_info(
+                            chunk_metadata, content, metadata, enhanced_analysis
+                        )
+                        
                         collection.add(
                             documents=[chunk],
                             metadatas=[chunk_metadata],
@@ -622,6 +633,118 @@ class EnhancedSystemIntegration:
         except Exception as e:
             self.logger.error(f"Tripartite routing failed: {e}")
     
+    def _route_to_special_pattern_collections(self, file_analysis: Dict, enhanced_analysis: Dict):
+        """Route content with special patterns to dedicated collections"""
+        try:
+            content = file_analysis.get('content', '')
+            if not content:
+                return
+                
+            pattern_analysis = enhanced_analysis.get('pattern_analysis', {})
+            core_patterns = pattern_analysis.get('core_float_patterns', {})
+            extended_patterns = pattern_analysis.get('extended_float_patterns', {})
+            
+            float_id = file_analysis.get('float_id')
+            metadata = file_analysis.get('metadata', {})
+            
+            # Get Chroma client
+            chroma_client = self.daemon.components['context'].client
+            
+            # Get special pattern collection config
+            special_collections = self.config.get('special_pattern_collections', {})
+            
+            collections_to_route = []
+            
+            # Check for float.dispatch patterns
+            if core_patterns.get('float_dispatch', {}).get('has_pattern', False):
+                if 'dispatch' in special_collections:
+                    collections_to_route.append(('dispatch', special_collections['dispatch']))
+            
+            # Check for float.rfc patterns  
+            if pattern_analysis.get('bbs_heritage', {}).get('float_rfc', {}).get('has_pattern', False):
+                if 'rfc' in special_collections:
+                    collections_to_route.append(('rfc', special_collections['rfc']))
+            
+            # Check for echoCopy:: patterns
+            if extended_patterns.get('echo_copy', {}).get('has_pattern', False):
+                if 'echo_copy' in special_collections:
+                    collections_to_route.append(('echo_copy', special_collections['echo_copy']))
+            
+            # Route to special pattern collections
+            for pattern_type, collection_name in collections_to_route:
+                try:
+                    collection = chroma_client.get_or_create_collection(
+                        name=collection_name,
+                        metadata={
+                            "description": f"FLOAT special pattern collection: {pattern_type}",
+                            "pattern_type": pattern_type,
+                            "enhanced_routing": True
+                        }
+                    )
+                    
+                    # Chunk content for storage
+                    chunks = self.daemon._chunk_content(content)
+                    
+                    # Store with enhanced metadata
+                    for i, chunk in enumerate(chunks):
+                        chunk_id = f"{float_id}_{pattern_type}_chunk_{i}"
+                        
+                        # Enhanced metadata for special patterns
+                        chunk_metadata = {
+                            'float_id': str(float_id or 'unknown'),
+                            'original_filename': str(metadata.get('filename') or 'unknown'),
+                            'chunk_index': int(i),
+                            'total_chunks': int(len(chunks)),
+                            'collection_type': str(pattern_type),
+                            'pattern_type': str(pattern_type),
+                            'content_classification': str(enhanced_analysis.get('content_classification') or 'unknown'),
+                            'is_conversation': str(enhanced_analysis.get('is_conversation', False)),
+                            'conversation_platform': str(enhanced_analysis.get('conversation_platform') or 'unknown'),
+                            'signal_density': float(enhanced_analysis.get('signal_density', 0.0)),
+                            'processed_at': str(file_analysis.get('processed_at') or datetime.now().isoformat()),
+                            'special_pattern_routing': 'true',
+                            'tripartite_also_routed': str(len(enhanced_analysis.get('tripartite_routing', [])) > 0)
+                        }
+                        
+                        # Add pattern-specific metadata
+                        if pattern_type == 'dispatch':
+                            dispatch_patterns = core_patterns.get('float_dispatch', {})
+                            chunk_metadata.update({
+                                'dispatch_count': int(dispatch_patterns.get('count', 0)),
+                                'has_dispatch_payload': str(len(dispatch_patterns.get('matches', [])) > 0)
+                            })
+                        elif pattern_type == 'rfc':
+                            rfc_patterns = pattern_analysis.get('bbs_heritage', {}).get('float_rfc', {})
+                            chunk_metadata.update({
+                                'rfc_count': int(rfc_patterns.get('count', 0)),
+                                'rfc_topics': str(rfc_patterns.get('matches', [])[:3])  # First 3 topics
+                            })
+                        elif pattern_type == 'echo_copy':
+                            echo_patterns = extended_patterns.get('echo_copy', {})
+                            chunk_metadata.update({
+                                'echo_copy_count': int(echo_patterns.get('count', 0)),
+                                'echo_copy_content': str(echo_patterns.get('matches', [])[:3])  # First 3 matches
+                            })
+                        
+                        # Add temporal metadata to special pattern collections too
+                        chunk_metadata = self.enhance_metadata_with_temporal_info(
+                            chunk_metadata, content, metadata, enhanced_analysis
+                        )
+                        
+                        collection.add(
+                            documents=[chunk],
+                            metadatas=[chunk_metadata],
+                            ids=[chunk_id]
+                        )
+                    
+                    self.logger.info(f"Routed to special pattern collection {collection_name}: {len(chunks)} chunks",
+                                   extra={'float_id': float_id, 'collection': collection_name, 'pattern_type': pattern_type})
+                    
+                except Exception as e:
+                    self.logger.error(f"Failed to route to special pattern collection {pattern_type}: {e}")
+                    
+        except Exception as e:
+            self.logger.error(f"Special pattern routing failed: {e}")
     
     
     def _generate_conversation_dis_file(self, file_analysis: Dict, enhanced_analysis: Dict) -> Optional[Path]:
@@ -747,6 +870,262 @@ LIMIT 3
         # This would integrate with the enhanced daily context system
         # to identify conversations that need .dis file generation
         pass
+    
+    def _initialize_temporal_features(self):
+        """Initialize temporal query capabilities"""
+        self.temporal_enabled = self.config.get('enable_temporal_queries', True)
+        if self.temporal_enabled:
+            self.logger.info("Temporal query features enabled")
+        else:
+            self.logger.info("Temporal query features disabled")
+    
+    def parse_conversation_date(self, content: str, metadata: Dict, enhanced_analysis: Dict) -> Optional[str]:
+        """
+        Extract and normalize conversation date from various sources.
+        Returns YYYY-MM-DD format or None if no date found.
+        """
+        import re
+        
+        # Try different date sources in order of preference
+        date_candidates = []
+        
+        # From conversation analysis
+        if enhanced_analysis.get('is_conversation'):
+            if 'conversation_id' in enhanced_analysis:
+                conv_id = enhanced_analysis['conversation_id']
+                date_candidates.append(conv_id)
+        
+        # From file metadata
+        date_candidates.extend([
+            metadata.get('filename', ''),
+            metadata.get('created_at', ''),
+            metadata.get('modified_at', ''),
+        ])
+        
+        # From content (look for date patterns in first 500 chars)
+        content_preview = content[:500] if content else ''
+        date_candidates.append(content_preview)
+        
+        # Date extraction patterns
+        date_patterns = [
+            r'(\d{4}-\d{2}-\d{2})',  # YYYY-MM-DD
+            r'(\d{4}/\d{2}/\d{2})',  # YYYY/MM/DD  
+            r'(\d{2}/\d{2}/\d{4})',  # MM/DD/YYYY
+            r'(\d{4}-\d{1,2}-\d{1,2})',  # YYYY-M-D
+            r'(\d{4}\d{2}\d{2})',  # YYYYMMDD
+        ]
+        
+        for candidate in date_candidates:
+            if not candidate:
+                continue
+                
+            for pattern in date_patterns:
+                match = re.search(pattern, str(candidate))
+                if match:
+                    date_str = match.group(1)
+                    try:
+                        # Normalize to YYYY-MM-DD format
+                        if '/' in date_str:
+                            if date_str.startswith('20'):  # YYYY/MM/DD
+                                parts = date_str.split('/')
+                                normalized = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+                            else:  # MM/DD/YYYY
+                                parts = date_str.split('/')
+                                normalized = f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+                        elif '-' in date_str:  # YYYY-MM-DD format
+                            parts = date_str.split('-')
+                            normalized = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+                        elif len(date_str) == 8:  # YYYYMMDD
+                            normalized = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                        else:
+                            continue
+                            
+                        # Validate date
+                        datetime.strptime(normalized, '%Y-%m-%d')
+                        return normalized
+                        
+                    except (ValueError, IndexError):
+                        continue
+        
+        return None
+    
+    def enhance_metadata_with_temporal_info(self, chunk_metadata: Dict, content: str, 
+                                          file_metadata: Dict, enhanced_analysis: Dict) -> Dict:
+        """Add temporal metadata to chunk for efficient date-based queries"""
+        
+        if not self.temporal_enabled:
+            return chunk_metadata
+        
+        # Parse conversation date
+        conversation_date = self.parse_conversation_date(content, file_metadata, enhanced_analysis)
+        
+        # Add temporal metadata
+        temporal_metadata = {
+            'conversation_date': conversation_date,
+            'conversation_year': conversation_date[:4] if conversation_date else None,
+            'conversation_month': conversation_date[:7] if conversation_date else None,  # YYYY-MM
+            'conversation_day_of_week': None,
+            'conversation_timestamp_parsed': None,
+        }
+        
+        # Calculate additional temporal info if we have a valid date
+        if conversation_date:
+            try:
+                date_obj = datetime.strptime(conversation_date, '%Y-%m-%d')
+                temporal_metadata.update({
+                    'conversation_day_of_week': date_obj.strftime('%A'),  # Monday, Tuesday, etc.
+                    'conversation_timestamp_parsed': date_obj.isoformat(),
+                })
+            except ValueError:
+                pass
+        
+        # Merge with existing metadata
+        enhanced_metadata = chunk_metadata.copy()
+        enhanced_metadata.update(temporal_metadata)
+        
+        return enhanced_metadata
+    
+    def query_conversations_by_date(self, target_date: str, max_results: int = 5) -> List[Dict]:
+        """
+        Query conversations by specific date across all tripartite collections.
+        
+        Args:
+            target_date: Date in YYYY-MM-DD format (e.g., "2025-06-01")
+            max_results: Maximum results to return per collection
+        
+        Returns:
+            List of conversation summaries for the date
+        """
+        if not self.temporal_enabled:
+            self.logger.warning("Temporal queries are disabled")
+            return []
+        
+        self.logger.info(f"Searching for conversations on {target_date}")
+        
+        all_results = []
+        chroma_client = self.daemon.components['context'].client
+        
+        # Query tripartite collections
+        tripartite_collections = self.config.get('tripartite_collections', {})
+        
+        for domain, collection_name in tripartite_collections.items():
+            try:
+                collection = chroma_client.get_collection(name=collection_name)
+                
+                # Query by exact date match
+                results = collection.get(
+                    where={"conversation_date": target_date},
+                    include=['documents', 'metadatas'],
+                    limit=max_results
+                )
+                
+                # Process results
+                for doc, metadata in zip(results['documents'], results['metadatas']):
+                    all_results.append({
+                        'domain': domain,
+                        'conversation_title': metadata.get('original_filename', 'Untitled'),
+                        'conversation_id': metadata.get('conversation_id', metadata.get('float_id')),
+                        'conversation_platform': metadata.get('conversation_platform', 'unknown'),
+                        'chunk_content_preview': doc[:200] + "..." if len(doc) > 200 else doc,
+                        'signal_density': metadata.get('signal_density', 0.0),
+                        'metadata': metadata
+                    })
+                    
+            except Exception as e:
+                self.logger.warning(f"Error querying {collection_name} for temporal data: {e}")
+        
+        # Deduplicate by conversation_id and sort
+        seen_conversations = {}
+        for result in all_results:
+            conv_id = result['conversation_id']
+            if conv_id not in seen_conversations:
+                seen_conversations[conv_id] = result
+            else:
+                # Keep the one with higher signal density
+                existing = seen_conversations[conv_id]
+                if result['signal_density'] > existing['signal_density']:
+                    seen_conversations[conv_id] = result
+        
+        unique_results = list(seen_conversations.values())
+        unique_results.sort(key=lambda x: (x['conversation_title'], x['domain']))
+        
+        return unique_results[:max_results]
+    
+    def get_conversations_for_date_range(self, start_date: str, end_date: str = None, 
+                                       max_results: int = 10) -> List[Dict]:
+        """
+        Get conversations for a date range across tripartite collections.
+        
+        Args:
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format (optional, defaults to start_date)
+            max_results: Maximum results to return
+        """
+        if not self.temporal_enabled:
+            self.logger.warning("Temporal queries are disabled")
+            return []
+        
+        if end_date is None:
+            end_date = start_date
+        
+        self.logger.info(f"Querying conversations from {start_date} to {end_date}")
+        
+        all_results = []
+        chroma_client = self.daemon.components['context'].client
+        tripartite_collections = self.config.get('tripartite_collections', {})
+        
+        for domain, collection_name in tripartite_collections.items():
+            try:
+                collection = chroma_client.get_collection(name=collection_name)
+                
+                # Build where clause for date range
+                if start_date == end_date:
+                    where_clause = {"conversation_date": start_date}
+                else:
+                    where_clause = {
+                        "$and": [
+                            {"conversation_date": {"$gte": start_date}},
+                            {"conversation_date": {"$lte": end_date}}
+                        ]
+                    }
+                
+                results = collection.get(
+                    where=where_clause,
+                    include=['documents', 'metadatas'],
+                    limit=max_results
+                )
+                
+                # Process results
+                for doc, metadata in zip(results['documents'], results['metadatas']):
+                    all_results.append({
+                        'date': metadata.get('conversation_date'),
+                        'domain': domain,
+                        'title': metadata.get('original_filename', 'Untitled'),
+                        'conversation_id': metadata.get('conversation_id', metadata.get('float_id')),
+                        'platform': metadata.get('conversation_platform', 'unknown'),
+                        'summary': doc[:300] + "..." if len(doc) > 300 else doc,
+                        'signal_density': metadata.get('signal_density', 0.0)
+                    })
+                    
+            except Exception as e:
+                self.logger.warning(f"Error querying {collection_name} for date range: {e}")
+        
+        # Deduplicate and sort by date
+        seen_conversations = {}
+        for result in all_results:
+            key = f"{result['date']}::{result['conversation_id']}"
+            if key not in seen_conversations:
+                seen_conversations[key] = result
+            else:
+                # Keep the one with higher signal density
+                existing = seen_conversations[key]
+                if result['signal_density'] > existing['signal_density']:
+                    seen_conversations[key] = result
+        
+        unique_results = list(seen_conversations.values())
+        unique_results.sort(key=lambda x: (x['date'] or '', x['title']))
+        
+        return unique_results[:max_results]
 
 if __name__ == "__main__":
     # Test enhanced integration

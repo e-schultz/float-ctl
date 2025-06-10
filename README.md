@@ -173,9 +173,12 @@ Enhance your content with FLOAT methodology markers:
 - `storyTime::narrative` - Narrative and experiential content
 
 **Persona Annotations:**
-- `[sysop::admin comment]` - System operator perspectives
-- `[any::general note]` - General annotations
-- Custom persona markers for context-specific insights
+- `[sysop::]` - System operator perspectives and technical oversight
+- `[karen::]` - Editorial conscience and after-hours creative director (internal support team)
+- `[qtb::]` - Queer Techno Bard perspectives and creative expressions
+- `[lf1m::]` - Little Fucker needs a minute (processing time and reflection)
+- `[any::]` - General annotations and broad contextual notes
+- Custom persona markers for neurodivergent symbolic narrative-cognitive tracking
 
 **Platform Integration:**
 - Automatic detection of lovable.dev, v0.dev, magicpatterns.com references
@@ -234,7 +237,13 @@ Create with: `python streamlined_float_daemon.py --create-config config.json`
   "ollama_url": "http://localhost:11434",
   "ollama_model": "llama3.1:8b",
   "enable_enhanced_integration": true,
-  "enable_tripartite_routing": true
+  "enable_tripartite_routing": true,
+  "special_pattern_collections": {
+    "dispatch": "float_dispatch_bay",
+    "rfc": "float_rfc", 
+    "echo_copy": "float_echoCopy"
+  },
+  "enable_temporal_queries": true
 }
 ```
 
@@ -277,6 +286,41 @@ Content is intelligently routed to specialized collections using enhanced patter
 - **Metaphor Collection** (`float_tripartite_v2_metaphor`): Analogies, experiences, intuitions, narratives
   - Optimized for resonance (800/1600 char chunks)
   - Persona annotations and experiential content
+
+### Special Pattern Collections
+
+Content with specific FLOAT patterns gets additional routing to dedicated collections:
+
+- **Dispatch Bay** (`float_dispatch_bay`): Content with `float.dispatch()` patterns
+  - Topic branching and dispatch objects
+  - Automatic routing alongside tripartite collections
+  
+- **RFC Collection** (`float_rfc`): Content with `float.rfc` patterns  
+  - FLOAT Request for Comments and specification documents
+  - Structured discussion and protocol definitions
+  
+- **Echo Copy Collection** (`float_echoCopy`): Content with `echoCopy::` patterns
+  - Echo and repetition patterns for reinforcement learning
+  - Cognitive anchoring and memory consolidation content
+
+### Temporal Query Features
+
+Enhanced date-based conversation queries for efficient temporal searches:
+
+- **Automatic date parsing** from filenames, content, and conversation metadata
+- **Normalized temporal metadata** (YYYY-MM-DD format, day of week, month/year)
+- **Date-specific queries** - "What conversations did we have on June 1st?"
+- **Date range queries** - "Show me conversations from last week"
+- **Cross-collection temporal search** across all tripartite and special collections
+
+**Usage Examples:**
+```python
+# Query conversations by specific date
+results = integration.query_conversations_by_date('2025-06-01')
+
+# Query conversations by date range  
+results = integration.get_conversations_for_date_range('2025-06-01', '2025-06-07')
+```
 
 **Enhanced Routing Features:**
 - Automatic domain classification with confidence scoring

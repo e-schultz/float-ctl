@@ -77,13 +77,13 @@ This is a FLOAT (Feed-Log-Offload-Archive-Trunk) knowledge management system tha
 
 ### Enhanced FLOAT Pattern Detection
 
-The Enhanced Pattern Detector recognizes 40+ sophisticated FLOAT methodology markers:
+The Enhanced Pattern Detector recognizes 40+ sophisticated FLOAT methodology markers, supporting a comprehensive neurodivergent symbolic system for narrative-cognitive tracking:
 
 **Core FLOAT Patterns:**
-- `ctx::` - Context markers for temporal/situational notes
+- `ctx::` - Ritual context markers for temporal anchors, mood tags, and cognitive states
 - `highlight::` - Important insights or key points
 - `signal::` - Key information and markers
-- `float.dispatch` - Dispatch objects for topic branching
+- `float.dispatch({...})` - Finalized cognitive exports (PRESERVE - never summarize)
 - Conversation links from Claude.ai or ChatGPT
 
 **Extended FLOAT Patterns:**
@@ -94,12 +94,13 @@ The Enhanced Pattern Detector recognizes 40+ sophisticated FLOAT methodology mar
 - `echoCopy::` - Content echoing and reinforcement
 
 **Persona Annotation System:**
-- `[sysop::]` - System operator perspectives
-- `[any::]` - General annotations
-- `[lf1m::]` - Looking for one more (team building)
-- `[qtb::]` - Question the basis (critical thinking)
-- `[karen::]` - Customer/user perspective
-- `[little-fucker::]` - Debugging and problem-solving
+- `[sysop::]` - System operator perspectives and technical oversight
+- `[karen::]` - Editorial conscience and after-hours creative director (internal support team)
+- `[qtb::]` - Queer Techno Bard perspectives and creative expressions  
+- `[lf1m::]` - Little Fucker needs a minute (processing time and reflection)
+- `[any::]` - General annotations and broad contextual notes
+- `[rawEvan::]` - Direct unfiltered perspectives
+- Custom persona markers for neurodivergent symbolic narrative-cognitive tracking
 
 **Platform Integration Detection:**
 - lovable.dev, v0.dev, magicpatterns.com references
@@ -112,12 +113,34 @@ The Enhanced Pattern Detector recognizes 40+ sophisticated FLOAT methodology mar
 - file_id.diz content detection
 - Legacy system integration markers
 
+**FLOAT Context Framework (Neurodivergent Symbolic System):**
+- `ctx::` serves as ritual context marker for temporal anchors and mood tracking
+- Persona recognition during different cognitive states (brain boot, karen mode, etc.)
+- `float.dispatch({...})` denotes finalized cognitive exports (preserve, never summarize)
+- Emotional tone tracking and transition state recognition
+- Support for narrative-cognitive tracking across neurodivergent workflows
+- Temporal anchors, mood tags, and cognitive state transitions
+
 ### ChromaDB Collections
 
 **Tripartite Collections (Enhanced Routing):**
 - `float_tripartite_v2_concept` - Conceptual domain storage (precision-optimized: 600/1200 chars)
 - `float_tripartite_v2_framework` - Framework domain storage (structure-optimized: 900/1800 chars)
 - `float_tripartite_v2_metaphor` - Metaphor domain storage (resonance-optimized: 800/1600 chars)
+
+**Special Pattern Collections (Dual Routing):**
+- `float_dispatch_bay` - Content with `float.dispatch()` patterns (topic branching and dispatch objects)
+- `float_rfc` - Content with `float.rfc` patterns (FLOAT Request for Comments and specifications)  
+- `float_echoCopy` - Content with `echoCopy::` patterns (echo/repetition for reinforcement learning)
+
+*Note: Special pattern routing works alongside tripartite routing - content gets stored in both the appropriate tripartite collection(s) AND the special pattern collection(s) when patterns are detected.*
+
+**Temporal Query Collections:**
+All collections now include enhanced temporal metadata for date-based queries:
+- `conversation_date` (YYYY-MM-DD format)
+- `conversation_year`, `conversation_month` (for temporal grouping)  
+- `conversation_day_of_week` (Monday, Tuesday, etc.)
+- `conversation_timestamp_parsed` (ISO format)
 
 **General Collections:**
 - `float_dropzone_comprehensive` - General dropzone ingestion (fallback collection)
@@ -189,7 +212,6 @@ Current active files in the system:
 - **Rich metadata generation** with 30+ fields for enhanced querying
 - **Platform integration detection** for modern development workflows
 
-
 ## documentation
 
 - ObsidianMD dataview documentation @docs/dataview.md
@@ -225,7 +247,6 @@ sudo apt-get install libmagic1  # Ubuntu
 - .dis files now generate clean static content
 - No mixed EJS/Templater syntax
 
-
 **Missing dependencies:**
 - All required modules are in the local directory
 - Enhanced Pattern Detector requires the comprehensive pattern analysis module
@@ -238,3 +259,7 @@ sudo apt-get install libmagic1  # Ubuntu
 - Tripartite routing requires Enhanced Integration System to be properly initialized
 - Cross-reference generation requires the dedicated CrossReferenceSystem
 - Fallback modes available when enhanced systems are unavailable
+
+## Memories
+- after changes have been made, review the readme.md and claude.md and see if any changes need to be made to reflect the changes
+```

@@ -88,7 +88,13 @@ class FloatConfig:
                 'concept': 'float_tripartite_v2_concept',
                 'framework': 'float_tripartite_v2_framework',
                 'metaphor': 'float_tripartite_v2_metaphor'
-            }
+            },
+            'special_pattern_collections': {
+                'dispatch': 'float_dispatch_bay',
+                'rfc': 'float_rfc',
+                'echo_copy': 'float_echoCopy'
+            },
+            'enable_temporal_queries': True
         }
     
     def get(self, key: str, default=None):
