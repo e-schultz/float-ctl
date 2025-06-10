@@ -92,15 +92,70 @@ class FloatDisGenerator:
                 'encoding': content_analysis.get('encoding', 'utf-8')
             },
             
-            # FLOAT patterns
+            # FLOAT patterns (enhanced from pattern detector)
             'float_patterns': {
                 'has_ctx_markers': content_analysis.get('has_ctx_markers', False),
                 'has_highlights': content_analysis.get('has_highlights', False),
                 'has_float_dispatch': content_analysis.get('has_float_dispatch', False),
                 'has_conversation_links': content_analysis.get('has_conversation_links', False),
+                
+                # Enhanced patterns from tripartite chunker
+                'core_signals': content_analysis.get('float_patterns', {}).get('ctx_markers', 0) + 
+                              content_analysis.get('float_patterns', {}).get('highlight_markers', 0) + 
+                              content_analysis.get('float_patterns', {}).get('signal_markers', 0),
+                'extended_patterns': content_analysis.get('float_patterns', {}).get('expand_on', 0) + 
+                                   content_analysis.get('float_patterns', {}).get('relates_to', 0) + 
+                                   content_analysis.get('float_patterns', {}).get('remember_when', 0) + 
+                                   content_analysis.get('float_patterns', {}).get('story_time', 0),
+                'persona_annotations': content_analysis.get('persona_count', 0),
+                'dominant_persona': content_analysis.get('dominant_persona'),
+                'signal_density': content_analysis.get('signal_density', 0.0),
+                'has_high_signal_density': content_analysis.get('has_high_signal_density', False),
                 'ctx_count': content_analysis.get('ctx_count', 0),
                 'highlight_count': content_analysis.get('highlight_count', 0),
                 'signal_density': content_analysis.get('signal_density', 0.0)
+            },
+            
+            # Tripartite classification (enhanced from pattern detector)
+            'tripartite': {
+                'primary_domain': content_analysis.get('tripartite_domain', 'concept'),
+                'confidence': content_analysis.get('tripartite_confidence', 0.0),
+                'scores': content_analysis.get('tripartite_scores', {}),
+                'routing': content_analysis.get('tripartite_routing', []),
+                'content_complexity': content_analysis.get('content_complexity', 'medium'),
+                'is_high_priority': content_analysis.get('is_high_priority', False)
+            },
+            
+            # Platform integration analysis
+            'platform_integration': {
+                'has_platform_refs': content_analysis.get('has_platform_integration', False),
+                'platform_count': content_analysis.get('platform_references', 0),
+                'build_tools': content_analysis.get('build_tool_references', []),
+                'external_services': content_analysis.get('external_service_references', [])
+            },
+            
+            # Document structure analysis
+            'document_structure': content_analysis.get('document_structure', {
+                'heading_count': 0,
+                'list_density': 0,
+                'code_density': 0.0,
+                'action_items': 0
+            }),
+            
+            # Cross-reference potential
+            'cross_references': {
+                'score': content_analysis.get('cross_reference_score', 0.0),
+                'has_potential': content_analysis.get('has_cross_reference_potential', False),
+                'citation_count': content_analysis.get('citation_count', 0),
+                'link_count': content_analysis.get('link_count', 0)
+            },
+            
+            # Actionable insights
+            'insights': {
+                'actionable_items': content_analysis.get('actionable_insights', []),
+                'priority_items': [item for item in content_analysis.get('actionable_insights', []) 
+                                 if item.get('priority') == 'high'],
+                'total_insights': len(content_analysis.get('actionable_insights', []))
             },
             
             # Processing metadata
@@ -154,6 +209,55 @@ class FloatDisGenerator:
             tags.append('float/highlight')
         if content_analysis.get('has_float_dispatch'):
             tags.append('float/dispatch')
+        
+        # Enhanced FLOAT pattern tags
+        if content_analysis.get('has_high_signal_density'):
+            tags.append('float/high-signal')
+        if content_analysis.get('persona_count', 0) > 0:
+            tags.append('float/persona')
+        if content_analysis.get('has_platform_integration'):
+            tags.append('float/platform-integration')
+        
+        # Tripartite classification tags
+        tripartite_domain = content_analysis.get('tripartite_domain')
+        if tripartite_domain:
+            tags.append(f'tripartite/{tripartite_domain}')
+        
+        tripartite_confidence = content_analysis.get('tripartite_confidence', 0)
+        if tripartite_confidence > 0.8:
+            tags.append('tripartite/high-confidence')
+        elif tripartite_confidence > 0.5:
+            tags.append('tripartite/medium-confidence')
+        else:
+            tags.append('tripartite/low-confidence')
+        
+        # Content complexity tags
+        complexity = content_analysis.get('content_complexity', 'medium')
+        tags.append(f'complexity/{complexity}')
+        
+        # Priority tags
+        if content_analysis.get('is_high_priority'):
+            tags.append('priority/high')
+        
+        # Document structure tags
+        doc_structure = content_analysis.get('document_structure', {})
+        if doc_structure.get('code_density', 0) > 0.1:
+            tags.append('content/code-heavy')
+        if doc_structure.get('action_items', 0) > 0:
+            tags.append('content/actionable')
+        if doc_structure.get('heading_count', 0) > 5:
+            tags.append('structure/well-organized')
+        
+        # Cross-reference potential tags
+        if content_analysis.get('has_cross_reference_potential'):
+            tags.append('cross-ref/potential')
+        
+        # Actionable insights tags
+        insights_count = len(content_analysis.get('actionable_insights', []))
+        if insights_count > 0:
+            tags.append('insights/actionable')
+        if insights_count > 3:
+            tags.append('insights/rich')
         
         # Size tags
         size_bytes = file_metadata.get('size_bytes', 0)

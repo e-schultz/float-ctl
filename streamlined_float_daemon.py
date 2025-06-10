@@ -111,7 +111,7 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         """Initialize components with fallback strategies"""
         components = {}
         
-        # Try enhanced context aggregator first
+        # Initialize enhanced context aggregator
         try:
             from enhanced_comprehensive_context_ollama import EnhancedComprehensiveDailyContext
             components['context'] = EnhancedComprehensiveDailyContext(
@@ -121,17 +121,7 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
             components['enhanced_mode'] = True
             self.logger.info("Enhanced context aggregator initialized")
         except ImportError as e:
-            self.logger.warning(f"Enhanced context not available: {e}")
-            try:
-                from comprehensive_daily_context import ComprehensiveDailyContext
-                components['context'] = ComprehensiveDailyContext(
-                    vault_path=str(self.vault_path),
-                    data_path=self.chroma_data_path
-                )
-                components['enhanced_mode'] = False
-                self.logger.info("Basic context aggregator initialized")
-            except ImportError as e:
-                raise RuntimeError(f"No context aggregator available: {e}")
+            raise RuntimeError(f"Enhanced context aggregator required: {e}")
         
         # Try Ollama summarizer
         if self.config.get('enable_ollama', True):
@@ -148,18 +138,13 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
             components['summarizer'] = None
             components['ollama_enabled'] = False
         
-        # Try .dis generator
+        # Initialize .dis generator
         try:
             from float_dis_template_system import FloatDisGenerator
             components['dis_generator'] = FloatDisGenerator()
             self.logger.info("FloatDisGenerator initialized")
-        except ImportError:
-            try:
-                from float_dis_generator import FloatDisGenerator
-                components['dis_generator'] = FloatDisGenerator()
-                self.logger.info("FloatDisGenerator initialized (alternate import)")
-            except ImportError as e:
-                raise RuntimeError(f"FloatDisGenerator required: {e}")
+        except ImportError as e:
+            raise RuntimeError(f"FloatDisGenerator required: {e}")
         
         return components
         
@@ -551,8 +536,7 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
     
     def _analyze_content_patterns(self, content: str, file_metadata: Dict) -> Dict:
         """
-        Analyze content for FLOAT patterns and other characteristics.
-        Reuses the comprehensive context aggregator's analysis methods.
+        Basic content analysis - complex pattern detection delegated to enhanced integration.
         """
         
         if not content:
@@ -570,48 +554,37 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
             'char_count': len(content),
         }
         
-        # Content type detection
+        # Simple content type detection
         content_lower = content.lower()
         if '"powered_by": "Claude Exporter' in content:
             analysis['content_type'] = "AI conversation export (Chrome plugin)"
         elif '"powered_by": "ChatGPT Exporter' in content:
             analysis['content_type'] = "AI conversation export (Chrome plugin)"
-        elif 'conversation' in content_lower or 'chat' in content_lower:
-            analysis['content_type'] = "Conversation/Chat export"
         elif content.strip().startswith('{') or content.strip().startswith('['):
             analysis['content_type'] = "JSON data structure"
-        elif 'claude.ai' in content or 'chatgpt.com' in content:
-            analysis['content_type'] = "AI conversation export"
         elif len([line for line in lines if line.startswith('#')]) > 3:
             analysis['content_type'] = "Markdown document"
         else:
             analysis['content_type'] = file_metadata.get('file_type', 'Unknown content')
         
-        # FLOAT pattern detection
+        # Basic FLOAT pattern detection (enhanced version handled by integration)
         ctx_matches = re.findall(r'ctx::', content)
         highlight_matches = re.findall(r'highlight::', content)
-        dispatch_matches = re.findall(r'float\.dispatch', content)
-        conversation_links = re.findall(r'https://(?:claude\.ai|chatgpt\.com)', content)
         
         analysis.update({
             'has_ctx_markers': len(ctx_matches) > 0,
             'has_highlights': len(highlight_matches) > 0,
-            'has_float_dispatch': len(dispatch_matches) > 0,
-            'has_conversation_links': len(conversation_links) > 0,
             'ctx_count': len(ctx_matches),
             'highlight_count': len(highlight_matches),
-            'signal_density': (len(ctx_matches) + len(highlight_matches) + len(dispatch_matches)) / max(len(words), 1)
+            'signal_density': (len(ctx_matches) + len(highlight_matches)) / max(len(words), 1)
         })
         
         # Generate basic summary
-        topic = "No clear topic identified"
-        for line in lines[:10]:
-            line = line.strip()
-            if len(line) > 10 and not line.startswith('#') and not line.startswith('-'):
-                topic = line[:100] + "..." if len(line) > 100 else line
-                break
+        first_line = next((line.strip() for line in lines[:10] 
+                          if len(line.strip()) > 10 and not line.startswith('#') and not line.startswith('-')), 
+                         "No clear topic identified")
         
-        analysis['basic_summary'] = f"{analysis['content_type']}. {topic}. {len(lines)} lines, {len(words)} words."
+        analysis['basic_summary'] = f"{analysis['content_type']}. {first_line[:100]}{'...' if len(first_line) > 100 else ''}. {len(lines)} lines, {len(words)} words."
         
         return analysis
     
@@ -630,68 +603,72 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
     
     def _store_in_comprehensive_collections(self, file_analysis: Dict) -> Dict:
         """
-        Store the file in appropriate Chroma collections.
-        Delegates to the comprehensive context aggregator's storage methods.
+        Store the file in dropzone collection - tripartite routing handled by enhanced integration.
         """
         
-        # For now, store in a dedicated dropzone collection
-        # In the future, this could intelligently route to tripartite collections
-        
         try:
-            dropzone_collection = self.components['context'].client.get_or_create_collection(
-                name="float_dropzone_comprehensive",
-                metadata={
-                    "description": "Comprehensive dropzone file ingestion",
-                    "processing_method": "streamlined_daemon"
-                }
-            )
-            
-            # Chunk content if needed
-            content = file_analysis['content']
-            if content and len(content) > 2000:
-                chunks = self._chunk_content(content)
-            else:
-                chunks = [content] if content else [f"Metadata-only entry for {file_analysis['metadata']['filename']}"]
-            
-            # Store chunks
-            chunk_ids = []
-            for i, chunk in enumerate(chunks):
-                chunk_id = f"{file_analysis['float_id']}_chunk_{i}"
-                chunk_ids.append(chunk_id)
+            # Enhanced integration handles tripartite routing separately
+            return self._store_in_dropzone_collection(file_analysis)
                 
-                chunk_metadata = {
-                    'float_id': file_analysis['float_id'],
-                    'original_filename': file_analysis['metadata']['filename'],
-                    'chunk_index': i,
-                    'total_chunks': len(chunks),
-                    'processed_at': file_analysis['processed_at'],
-                    'source_type': 'dropzone_comprehensive',
-                    'file_size_bytes': file_analysis['metadata'].get('size_bytes', 0),
-                    'content_type': file_analysis['analysis'].get('content_type', 'unknown'),
-                    'has_ollama_summary': 'ollama_summary' in file_analysis,
-                    'signal_count': (file_analysis['analysis'].get('ctx_count', 0) + 
-                                   file_analysis['analysis'].get('highlight_count', 0))
-                }
-                
-                dropzone_collection.add(
-                    documents=[chunk],
-                    metadatas=[chunk_metadata],
-                    ids=[chunk_id]
-                )
-            
-            return {
-                'success': True,
-                'collection': 'float_dropzone_comprehensive',
-                'chunk_count': len(chunks),
-                'chunk_ids': chunk_ids
-            }
-            
         except Exception as e:
-            print(f"⚠️ Storage failed: {e}")
+            self.logger.error(f"Storage failed: {e}", extra={'float_id': file_analysis.get('float_id')})
             return {
                 'success': False,
                 'error': str(e)
             }
+    
+    
+    def _store_in_dropzone_collection(self, file_analysis: Dict) -> Dict:
+        """Fallback storage in dropzone collection."""
+        
+        dropzone_collection = self.components['context'].client.get_or_create_collection(
+            name="float_dropzone_comprehensive",
+            metadata={
+                "description": "Comprehensive dropzone file ingestion",
+                "processing_method": "streamlined_daemon"
+            }
+        )
+        
+        # Basic chunking for fallback
+        content = file_analysis['content']
+        if content and len(content) > 2000:
+            chunks = self._chunk_content(content)
+        else:
+            chunks = [content] if content else [f"Metadata-only entry for {file_analysis['metadata']['filename']}"]
+        
+        # Store chunks
+        chunk_ids = []
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{file_analysis['float_id']}_chunk_{i}"
+            chunk_ids.append(chunk_id)
+            
+            chunk_metadata = {
+                'float_id': file_analysis['float_id'],
+                'original_filename': file_analysis['metadata']['filename'],
+                'chunk_index': i,
+                'total_chunks': len(chunks),
+                'processed_at': file_analysis['processed_at'],
+                'source_type': 'dropzone_comprehensive',
+                'file_size_bytes': file_analysis['metadata'].get('size_bytes', 0),
+                'content_type': file_analysis['analysis'].get('content_type', 'unknown'),
+                'has_ollama_summary': 'ollama_summary' in file_analysis,
+                'signal_count': (file_analysis['analysis'].get('ctx_count', 0) + 
+                               file_analysis['analysis'].get('highlight_count', 0))
+            }
+            
+            dropzone_collection.add(
+                documents=[chunk],
+                metadatas=[chunk_metadata],
+                ids=[chunk_id]
+            )
+        
+        return {
+            'success': True,
+            'storage_method': 'dropzone',
+            'collection': 'float_dropzone_comprehensive',
+            'chunk_count': len(chunks),
+            'chunk_ids': chunk_ids
+        }
     
     def _chunk_content(self, content: str, chunk_size: int = 2000) -> List[str]:
         """Simple content chunking."""
@@ -715,6 +692,14 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
             chunks.append(current_chunk.strip())
         
         return chunks
+    
+    
+    
+    
+    
+    
+    
+    
     
     def _generate_dis_file(self, file_path: Path, file_analysis: Dict, storage_result: Dict) -> Path:
         """Generate .float_dis.md file using the dis generator."""

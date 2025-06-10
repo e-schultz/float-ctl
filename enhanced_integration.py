@@ -1,6 +1,7 @@
 """
 Enhanced integration system for FLOAT ecosystem
 Bridges daemon, daily context, and conversation processing
+Now includes sophisticated pattern detection from tripartite chunker
 """
 
 import re
@@ -25,6 +26,9 @@ class EnhancedSystemIntegration:
                                                          str(self.vault_path / 'FLOAT.conversations')))
         self.conversation_dis_path.mkdir(exist_ok=True)
         
+        # Initialize enhanced pattern detector
+        self._initialize_enhanced_pattern_detector()
+        
         # Initialize enhanced context if available
         self._initialize_enhanced_context()
         
@@ -36,6 +40,16 @@ class EnhancedSystemIntegration:
         
         # Conversation detection patterns
         self._initialize_conversation_patterns()
+    
+    def _initialize_enhanced_pattern_detector(self):
+        """Initialize enhanced pattern detector from tripartite chunker"""
+        try:
+            from enhanced_pattern_detector import EnhancedFloatPatternDetector
+            self.pattern_detector = EnhancedFloatPatternDetector()
+            self.logger.info("Enhanced pattern detector initialized")
+        except Exception as e:
+            self.logger.warning(f"Enhanced pattern detector not available: {e}")
+            self.pattern_detector = None
     
     def _initialize_enhanced_context(self):
         """Initialize enhanced daily context if available"""
@@ -115,9 +129,10 @@ class EnhancedSystemIntegration:
         # Step 5: Cross-reference generation
         if self.cross_ref_system:
             cross_references = self.cross_ref_system.generate_cross_references(file_analysis, enhanced_analysis)
+            file_analysis['cross_references'] = cross_references
         else:
-            cross_references = self._generate_cross_references(file_analysis, enhanced_analysis)
-        file_analysis['cross_references'] = cross_references
+            self.logger.warning("Cross-reference system not available - skipping cross-reference generation")
+            file_analysis['cross_references'] = {'vault_references': [], 'chroma_references': [], 'conversation_links': [], 'topic_connections': []}
         
         # Step 6: Enhanced conversation .dis file generation
         if enhanced_analysis.get('is_conversation'):
@@ -132,10 +147,11 @@ class EnhancedSystemIntegration:
         return result
     
     def _perform_enhanced_analysis(self, file_analysis: Dict) -> Dict:
-        """Perform enhanced content analysis beyond basic patterns"""
+        """Perform enhanced content analysis using sophisticated pattern detection"""
         content = file_analysis.get('content', '')
         metadata = file_analysis.get('metadata', {})
         basic_analysis = file_analysis.get('analysis', {})
+        file_path = Path(metadata.get('file_path', '')) if metadata.get('file_path') else None
         
         enhanced = {
             'is_conversation': False,
@@ -145,13 +161,85 @@ class EnhancedSystemIntegration:
             'topics': [],
             'signal_density': 0.0,
             'content_classification': 'unknown',
-            'tripartite_routing': []
+            'tripartite_routing': [],
+            'pattern_analysis': {}
         }
         
         if not content:
             return enhanced
         
-        # Conversation detection
+        # Enhanced pattern detection using tripartite chunker patterns
+        if self.pattern_detector:
+            pattern_analysis = self.pattern_detector.extract_comprehensive_patterns(content, file_path)
+            enhanced['pattern_analysis'] = pattern_analysis
+            
+            # Use tripartite classification
+            tripartite = pattern_analysis.get('tripartite_classification', {})
+            enhanced['tripartite_domain'] = tripartite.get('primary_domain', 'concept')
+            enhanced['tripartite_confidence'] = tripartite.get('confidence', 0.0)
+            enhanced['tripartite_scores'] = tripartite.get('scores', {})
+            
+            # Enhanced signal density from pattern analysis
+            signal_analysis = pattern_analysis.get('signal_analysis', {})
+            enhanced['signal_density'] = signal_analysis.get('signal_density_per_100_words', 0.0) / 100
+            enhanced['total_signals'] = signal_analysis.get('total_core_signals', 0)
+            enhanced['extended_patterns'] = signal_analysis.get('total_extended_patterns', 0)
+            enhanced['has_high_signal_density'] = signal_analysis.get('has_high_signal_density', False)
+            
+            # Content complexity assessment
+            enhanced['content_complexity'] = self.pattern_detector.get_content_complexity_assessment(pattern_analysis)
+            enhanced['is_high_priority'] = self.pattern_detector.is_high_priority_content(pattern_analysis)
+            
+            # Actionable insights
+            enhanced['actionable_insights'] = self.pattern_detector.extract_actionable_insights(pattern_analysis)
+            
+            # Platform integration analysis
+            platform_analysis = pattern_analysis.get('platform_integration', {})
+            enhanced['has_platform_integration'] = platform_analysis.get('has_platform_integration', False)
+            enhanced['platform_references'] = platform_analysis.get('total_platform_references', 0)
+            
+            # Persona analysis
+            persona_analysis = pattern_analysis.get('persona_analysis', {})
+            enhanced['has_persona_annotations'] = persona_analysis.get('has_persona_system', False)
+            enhanced['persona_count'] = persona_analysis.get('total_persona_annotations', 0)
+            enhanced['dominant_persona'] = persona_analysis.get('dominant_persona')
+            
+            # Cross-reference potential
+            cross_ref = pattern_analysis.get('cross_reference_potential', {})
+            enhanced['cross_reference_score'] = cross_ref.get('cross_reference_score', 0.0)
+            enhanced['has_cross_reference_potential'] = cross_ref.get('cross_reference_score', 0.0) > 0.3
+            
+            # Document structure analysis
+            structure = pattern_analysis.get('document_structure', {})
+            enhanced['document_structure'] = {
+                'heading_count': structure.get('headings', {}).get('count', 0),
+                'list_density': structure.get('lists', {}).get('total_list_items', 0),
+                'code_density': structure.get('code', {}).get('code_density', 0.0),
+                'action_items': structure.get('action_items', {}).get('count', 0)
+            }
+            
+            # FLOAT-specific patterns
+            core_patterns = pattern_analysis.get('core_float_patterns', {})
+            extended_patterns = pattern_analysis.get('extended_float_patterns', {})
+            
+            enhanced['float_patterns'] = {
+                'ctx_markers': core_patterns.get('ctx_markers', {}).get('count', 0),
+                'highlight_markers': core_patterns.get('highlight_markers', {}).get('count', 0),
+                'signal_markers': core_patterns.get('signal_markers', {}).get('count', 0),
+                'float_dispatch': core_patterns.get('float_dispatch', {}).get('has_pattern', False),
+                'sysop_comments': core_patterns.get('sysop_comments', {}).get('count', 0),
+                'expand_on': extended_patterns.get('expand_on', {}).get('count', 0),
+                'relates_to': extended_patterns.get('relates_to', {}).get('count', 0),
+                'remember_when': extended_patterns.get('remember_when', {}).get('count', 0),
+                'story_time': extended_patterns.get('story_time', {}).get('count', 0),
+                'mood_markers': extended_patterns.get('mood_markers', {}).get('count', 0)
+            }
+        else:
+            # Fallback to basic analysis
+            self.logger.warning("Using fallback analysis - enhanced pattern detector not available")
+            enhanced = self._perform_basic_enhanced_analysis(content, metadata, basic_analysis)
+        
+        # Conversation detection (keep existing logic)
         conversation_analysis = self._analyze_conversation_content(content, metadata)
         enhanced.update(conversation_analysis)
         
@@ -161,14 +249,57 @@ class EnhancedSystemIntegration:
         # Topic extraction
         enhanced['topics'] = self._extract_topics(content)
         
-        # Signal density calculation
+        # Tripartite routing decisions
+        enhanced['tripartite_routing'] = self._determine_tripartite_routing(content, enhanced)
+        
+        return enhanced
+    
+    def _perform_basic_enhanced_analysis(self, content: str, metadata: Dict, basic_analysis: Dict) -> Dict:
+        """Fallback basic analysis when enhanced pattern detector is not available"""
+        enhanced = {
+            'tripartite_domain': 'concept',
+            'tripartite_confidence': 0.5,
+            'tripartite_scores': {'concept': 1, 'framework': 0, 'metaphor': 0},
+            'signal_density': 0.0,
+            'total_signals': 0,
+            'extended_patterns': 0,
+            'has_high_signal_density': False,
+            'content_complexity': 'medium',
+            'is_high_priority': False,
+            'actionable_insights': [],
+            'has_platform_integration': False,
+            'platform_references': 0,
+            'has_persona_annotations': False,
+            'persona_count': 0,
+            'dominant_persona': None,
+            'cross_reference_score': 0.0,
+            'has_cross_reference_potential': False,
+            'document_structure': {
+                'heading_count': 0,
+                'list_density': 0,
+                'code_density': 0.0,
+                'action_items': 0
+            },
+            'float_patterns': {
+                'ctx_markers': basic_analysis.get('ctx_count', 0),
+                'highlight_markers': basic_analysis.get('highlight_count', 0),
+                'signal_markers': 0,
+                'float_dispatch': False,
+                'sysop_comments': 0,
+                'expand_on': 0,
+                'relates_to': 0,
+                'remember_when': 0,
+                'story_time': 0,
+                'mood_markers': 0
+            }
+        }
+        
+        # Basic signal density calculation
         ctx_count = basic_analysis.get('ctx_count', 0)
         highlight_count = basic_analysis.get('highlight_count', 0)
         word_count = basic_analysis.get('word_count', 1)
         enhanced['signal_density'] = (ctx_count + highlight_count) / word_count
-        
-        # Tripartite routing decisions
-        enhanced['tripartite_routing'] = self._determine_tripartite_routing(content, enhanced)
+        enhanced['total_signals'] = ctx_count + highlight_count
         
         return enhanced
     
@@ -324,7 +455,56 @@ class EnhancedSystemIntegration:
         return [topic for topic, count in topic_counts.most_common(10) if count > 1]
     
     def _determine_tripartite_routing(self, content: str, enhanced_analysis: Dict) -> List[str]:
-        """Determine which tripartite collections should receive this content"""
+        """Determine which tripartite collections should receive this content using enhanced classification"""
+        
+        # Use enhanced pattern detector classification if available
+        if 'tripartite_domain' in enhanced_analysis:
+            primary_domain = enhanced_analysis.get('tripartite_domain', 'concept')
+            confidence = enhanced_analysis.get('tripartite_confidence', 0.0)
+            scores = enhanced_analysis.get('tripartite_scores', {})
+            
+            routing = []
+            
+            # Always include the primary domain
+            routing.append(primary_domain)
+            
+            # Include secondary domains if they have significant scores
+            confidence_threshold = 0.3
+            for domain, score in scores.items():
+                normalized_score = score / max(sum(scores.values()), 1)
+                if domain != primary_domain and normalized_score > confidence_threshold:
+                    routing.append(domain)
+            
+            # Special routing rules for high-signal content
+            if enhanced_analysis.get('has_high_signal_density', False):
+                # High-signal content goes to all domains
+                routing = ['concept', 'framework', 'metaphor']
+            
+            # Conversation-specific routing
+            if enhanced_analysis.get('is_conversation'):
+                # Conversations often contain all three elements
+                if len(routing) == 1:  # If only primary domain, add others
+                    for domain in ['concept', 'framework', 'metaphor']:
+                        if domain not in routing:
+                            routing.append(domain)
+            
+            # Platform integration content goes to framework
+            if enhanced_analysis.get('has_platform_integration', False):
+                if 'framework' not in routing:
+                    routing.append('framework')
+            
+            # Persona annotations indicate high-value content for all domains
+            if enhanced_analysis.get('has_persona_annotations', False):
+                routing = ['concept', 'framework', 'metaphor']
+            
+            return routing
+        
+        else:
+            # Fallback to basic keyword-based routing
+            return self._basic_tripartite_routing(content, enhanced_analysis)
+    
+    def _basic_tripartite_routing(self, content: str, enhanced_analysis: Dict) -> List[str]:
+        """Fallback basic tripartite routing when enhanced classification is not available"""
         routing = []
         content_lower = content.lower()
         
@@ -442,61 +622,7 @@ class EnhancedSystemIntegration:
         except Exception as e:
             self.logger.error(f"Tripartite routing failed: {e}")
     
-    def _generate_cross_references(self, file_analysis: Dict, enhanced_analysis: Dict) -> Dict:
-        """Generate cross-references between FLOAT systems"""
-        cross_refs = {
-            'vault_references': [],
-            'chroma_references': [],
-            'conversation_links': [],
-            'topic_connections': enhanced_analysis.get('topics', [])
-        }
-        
-        try:
-            content = file_analysis.get('content', '')
-            if not content:
-                return cross_refs
-            
-            # Extract conversation links
-            if enhanced_analysis.get('conversation_urls'):
-                for url in enhanced_analysis['conversation_urls']:
-                    cross_refs['conversation_links'].append({
-                        'url': url,
-                        'platform': self._detect_platform_from_url(url),
-                        'title': f"Conversation: {enhanced_analysis.get('conversation_id', 'Unknown')}"
-                    })
-            
-            # Find vault references (simplified)
-            key_terms = enhanced_analysis.get('topics', [])[:5]  # Top 5 topics
-            for term in key_terms:
-                # This would be enhanced with actual vault search
-                cross_refs['vault_references'].append({
-                    'term': term,
-                    'relevance': 'topic_match',
-                    'type': 'potential_link'
-                })
-            
-            # Chroma collection references
-            for collection_type in enhanced_analysis.get('tripartite_routing', []):
-                cross_refs['chroma_references'].append({
-                    'collection': f'float_tripartite_v2_{collection_type}',
-                    'type': 'tripartite_routing',
-                    'relevance': 'content_classification'
-                })
-            
-        except Exception as e:
-            self.logger.error(f"Cross-reference generation failed: {e}")
-        
-        return cross_refs
     
-    def _detect_platform_from_url(self, url: str) -> str:
-        """Detect conversation platform from URL"""
-        domain = urlparse(url).netloc.lower()
-        if 'claude.ai' in domain:
-            return 'claude_ai'
-        elif 'chatgpt.com' in domain or 'openai.com' in domain:
-            return 'chatgpt'
-        else:
-            return 'unknown'
     
     def _generate_conversation_dis_file(self, file_analysis: Dict, enhanced_analysis: Dict) -> Optional[Path]:
         """Generate enhanced .dis file specifically for conversation content"""
