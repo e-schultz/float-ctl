@@ -39,6 +39,12 @@ python enhanced_pattern_detector.py
 
 # Test enhanced integration system
 python enhanced_integration.py
+
+# Test configuration validation
+python -c "from config import FloatConfig; c = FloatConfig(); print('Config valid:', c.validate())"
+
+# Debug configuration issues
+python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Ollama enabled:', c.get('enable_ollama'))"
 ```
 
 ## Architecture Overview
@@ -55,25 +61,38 @@ This is a FLOAT (Feed-Log-Offload-Archive-Trunk) knowledge management system tha
 
 4. **Enhanced Comprehensive Context (`enhanced_comprehensive_context_ollama.py`)**: Aggregates daily context from conversations and vault activity, generates conversation .dis files, and provides cross-referencing capabilities. Includes Ollama integration for intelligent summarization.
 
-5. **Ollama Float Summarizer (`ollama_enhanced_float_summarizer.py`)**: Handles hierarchical multi-chunk summarization using local Ollama models. Intelligently chunks content based on type (conversation, document, etc.).
+5. **Daily Log Detection & Processing**: Advanced detection system that distinguishes daily logs from conversations using frontmatter patterns (`type: log`, `uid: log::`, `mood:`, `soundtrack:` fields) and content structure analysis. Provides specialized analysis for actionable items, mood tracking, and productivity signals.
 
-6. **Float .dis Generator (`float_dis_template_system.py`)**: Creates rich `.float_dis.md` files with comprehensive YAML frontmatter, enhanced auto-tagging, and Templater.js templates for Obsidian integration.
+6. **Ollama Float Summarizer (`ollama_enhanced_float_summarizer.py`)**: Handles hierarchical multi-chunk summarization using local Ollama models. Intelligently chunks content based on type (conversation, document, etc.).
+
+7. **Float .dis Generator (`float_dis_template_system.py`)**: Creates rich `.float_dis.md` files with comprehensive YAML frontmatter, enhanced auto-tagging, and Templater.js templates for Obsidian integration.
 
 ### Data Flow
 
 1. **File Detection**: Daemon monitors dropzone folder for new files
 2. **Basic Processing**: Daemon extracts content/metadata and performs initial analysis
-3. **Enhanced Integration**: Sophisticated analysis via Enhanced Integration System:
+3. **Content Classification (CRITICAL FIRST STEP)**: Enhanced Integration System performs content classification to identify:
+   - **Daily Logs**: Via frontmatter patterns (`type: log`, `uid: log::`, etc.) and content structure
+   - **Conversations**: Platform-specific exports from Claude.ai, ChatGPT, etc.
+   - **General Documents**: All other content types
+4. **Specialized Processing Path**: Based on content type:
+   - **Daily Logs**: Specialized daily log analysis with mood tracking, actionable items, productivity signals
+   - **Conversations**: Platform metadata extraction, speaker analysis, dialogue structure
+   - **General Documents**: Standard FLOAT pattern analysis and document structure
+5. **Enhanced Integration**: Sophisticated analysis via Enhanced Integration System:
    - **Pattern Analysis**: 40+ FLOAT patterns detected via Enhanced Pattern Detector
-   - **Content Classification**: Tripartite domain classification (Concept/Framework/Metaphor)
+   - **Tripartite Classification**: Domain classification (Concept/Framework/Metaphor) with confidence scoring
    - **Signal Density**: Advanced signal analysis with threshold detection
    - **Platform Integration**: Detection of build tools and external service references
-4. **Intelligent Routing**: Content routed to appropriate tripartite collections based on analysis
-5. **Ollama Summarization**: AI-powered summaries generated (if enabled)
-6. **Storage Optimization**: Domain-specific chunking strategies applied
-7. **Rich .dis Generation**: Comprehensive `.float_dis.md` files with 30+ metadata fields
-8. **Cross-Reference**: Vault and collection cross-references generated
-9. **Daily Context**: Enhanced daily summaries updated with new content
+6. **Intelligent Routing**: Content routed to appropriate tripartite collections based on analysis
+7. **Ollama Summarization**: AI-powered summaries generated (if enabled and configured correctly)
+8. **Storage Optimization**: Domain-specific chunking strategies applied
+9. **Rich .dis Generation**: Comprehensive `.float_dis.md` files with 30+ metadata fields
+   - **Daily Logs**: Enhanced with AI insights, actionable items, mood tracking in `FLOAT.conversations/`
+   - **Conversations**: Platform metadata, speaker analysis, topic extraction in `FLOAT.conversations/`
+   - **General Documents**: Pattern analysis, tripartite classification, cross-references in dropzone
+10. **Cross-Reference**: Vault and collection cross-references generated
+11. **Daily Context**: Enhanced daily summaries updated with new content
 
 ### Enhanced FLOAT Pattern Detection
 
@@ -212,6 +231,32 @@ Current active files in the system:
 - **Rich metadata generation** with 30+ fields for enhanced querying
 - **Platform integration detection** for modern development workflows
 
+### Daily Log Processing Improvements (Latest)
+
+**Content-Aware Processing:**
+- **Fixed daily log misidentification**: Enhanced detection using frontmatter patterns (`type: log`, `uid: log::`, `mood:`, `soundtrack:`)
+- **Processing order fix**: Content classification now happens BEFORE conversation detection
+- **Specialized daily log analysis**: Mood tracking, actionable item extraction, productivity signals
+- **Enhanced .dis generation**: Daily logs now get specialized .dis files in `FLOAT.conversations/` with AI-powered insights
+
+**Configuration Bug Fixes:**
+- **Fixed critical Ollama integration bug**: Environment variable handling was incorrectly overriding `enable_ollama` to `False`
+- **Proper boolean environment variable handling**: Only overrides when env var is actually set
+- **Configuration validation**: Added debug commands for troubleshooting config issues
+
+**Signal-to-Noise Improvements:**
+- **Reduced template boilerplate**: Focus on extracting meaningful patterns rather than generic descriptions
+- **Enhanced pattern recognition**: 40+ FLOAT patterns detected with confidence scoring
+- **Content complexity assessment**: Intelligent chunking based on document type and signal density
+- **Cross-reference generation**: Automatic vault linking and temporal context maintenance
+
+**Current State (2025-06-12):**
+- **Daemon Status**: Healthy with 2 files processed successfully (100% success rate)
+- **Ollama Integration**: Fixed and working correctly with model `llama3.1:8b`
+- **ChromaDB**: 51 collections with comprehensive tripartite routing
+- **Processing Performance**: Average 81.4 seconds per file with hierarchical AI analysis
+- **Daily Log Processing**: Fully functional with specialized templates and AI insights
+
 ## documentation
 
 - ObsidianMD dataview documentation @docs/dataview.md
@@ -242,6 +287,64 @@ sudo apt-get install libmagic1  # Ubuntu
 - Verify dropzone path has correct permissions (755)
 - Ensure ChromaDB data path is writable
 
+**"AI Summary shows 'None'" - Ollama Integration Issues:**
+
+This critical issue indicates Ollama is not properly enabled or configured. The most common cause is a configuration bug where environment variable logic incorrectly overrides the config file setting.
+
+**Diagnosis:**
+```bash
+# Check Ollama is running
+ollama list
+curl http://localhost:11434/api/tags
+
+# Verify FLOAT configuration
+python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Ollama enabled:', c.get('enable_ollama'))"
+
+# Check daemon status (if running)
+cat ~/float-dropzone/.daemon_status.json | grep -A 10 ollama
+```
+
+**Root Cause Fix:**
+The issue was in `config.py` where environment variable handling incorrectly overrode `enable_ollama` to `False` even when not set:
+
+```python
+# FIXED: Environment variable handling now only overrides when actually set
+float_enable_ollama = os.getenv('FLOAT_ENABLE_OLLAMA')
+if float_enable_ollama is not None:
+    env_overrides['enable_ollama'] = float_enable_ollama.lower() == 'true'
+```
+
+**Verification:**
+Ensure config file has:
+```json
+{
+  "enable_ollama": true,
+  "ollama_url": "http://localhost:11434",
+  "ollama_model": "llama3.1:8b"
+}
+```
+
+**Daily Logs Processed as Conversations:**
+
+FLOAT now properly detects daily logs via comprehensive frontmatter analysis:
+
+```yaml
+---
+type: log
+uid: log::
+title: 2025-06-12
+mood: "focused"
+tags: [daily]
+soundtrack: "Artist - Song"
+---
+```
+
+**Detection criteria:**
+- Frontmatter contains `type: log`, `uid: log::`, `mood:`, `soundtrack:` fields
+- Filename matches `YYYY-MM-DD.md` pattern
+- Content includes daily log section markers (## Brain Boot, ## Body Boot)
+- Processing order ensures content classification happens BEFORE conversation detection
+
 **Templater syntax errors in Obsidian:**
 - Issue was fixed in `float_dis_template_system.py`
 - .dis files now generate clean static content
@@ -259,6 +362,15 @@ sudo apt-get install libmagic1  # Ubuntu
 - Tripartite routing requires Enhanced Integration System to be properly initialized
 - Cross-reference generation requires the dedicated CrossReferenceSystem
 - Fallback modes available when enhanced systems are unavailable
+
+**Configuration Validation:**
+```bash
+# Test configuration loading
+python -c "from config import FloatConfig; c = FloatConfig(); print(c.validate())"
+
+# Debug specific config values
+python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Config:', {k:v for k,v in c.config.items() if 'ollama' in k.lower()})"
+```
 
 ## Memories
 - after changes have been made, review the readme.md and claude.md and see if any changes need to be made to reflect the changes

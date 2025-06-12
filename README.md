@@ -6,13 +6,14 @@ A comprehensive file processing and knowledge management system that automates t
 
 FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management system that:
 
-- **Monitors** a dropzone folder for new files
-- **Processes** various file types (text, markdown, JSON, PDF, Word docs)
-- **Analyzes** content using AI-powered summarization (Ollama)
-- **Stores** content in ChromaDB with intelligent routing to tripartite collections
-- **Generates** rich `.dis` files for Obsidian with cross-references and metadata
-- **Maintains** daily context summaries and conversation analysis
-- **Provides** comprehensive monitoring, logging, and error recovery
+- **Monitors** a dropzone folder for new files with real-time processing
+- **Processes** various file types (text, markdown, JSON, PDF, Word docs) with content-aware analysis
+- **Analyzes** content using local AI-powered summarization (Ollama) with specialized prompts
+- **Classifies** content intelligently (daily logs vs conversations vs general documents)
+- **Stores** content in ChromaDB with sophisticated tripartite collection routing
+- **Generates** rich `.dis` files for Obsidian with enhanced metadata and cross-references
+- **Maintains** daily context summaries and conversation analysis with temporal indexing
+- **Provides** comprehensive monitoring, logging, error recovery, and health checks
 
 ## Architecture
 
@@ -31,16 +32,27 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 
 ### Key Components
 
+#### Core Processing
 1. **Streamlined Daemon** (`streamlined_float_daemon.py`) - Main file watcher and orchestrator
-2. **Enhanced Integration** (`enhanced_integration.py`) - Deep ecosystem integration with sophisticated analysis
+2. **Enhanced Integration** (`enhanced_integration.py`) - Deep ecosystem integration with sophisticated content classification
 3. **Enhanced Pattern Detector** (`enhanced_pattern_detector.py`) - Comprehensive FLOAT signal analysis (40+ pattern types)
-4. **Configuration System** (`config.py`) - Centralized configuration management
-5. **Error Recovery** (`error_recovery.py`) - Robust error handling and retry logic
-6. **Performance Monitoring** (`performance_monitor.py`) - Real-time performance tracking
-7. **Health Monitoring** (`health_monitor.py`) - System health checks
-8. **Cross-Reference System** (`cross_reference_system.py`) - Bidirectional vault linking
-9. **Conversation Analysis** (`conversation_dis_enhanced.py`) - Advanced conversation processing
-10. **Logging System** (`logging_config.py`) - Structured logging with rotation
+4. **Configuration System** (`config.py`) - Centralized configuration with environment variable support
+
+#### AI-Powered Analysis
+5. **Ollama Summarizer** (`ollama_enhanced_float_summarizer.py`) - Local AI summarization with hierarchical processing
+6. **Enhanced Daily Context** (`enhanced_comprehensive_context_ollama.py`) - AI-powered daily log analysis
+7. **Conversation Analysis** (`conversation_dis_enhanced.py`) - Advanced conversation processing with platform detection
+
+#### Storage and Routing
+8. **Tripartite Collection System** - Intelligent routing to concept/framework/metaphor domains
+9. **Cross-Reference System** (`cross_reference_system.py`) - Bidirectional vault linking
+10. **Temporal Query System** - Date-based conversation indexing and retrieval
+
+#### Monitoring and Recovery
+11. **Error Recovery** (`error_recovery.py`) - Robust error handling with quarantine system
+12. **Performance Monitoring** (`performance_monitor.py`) - Real-time metrics and throughput tracking
+13. **Health Monitoring** (`health_monitor.py`) - Component health checks and status reporting
+14. **Logging System** (`logging_config.py`) - Structured logging with performance integration
 
 ## Installation
 
@@ -119,35 +131,62 @@ python streamlined_float_daemon.py ~/float-dropzone
 
 ### Advanced Usage
 
-Using configuration file:
+Using configuration file (recommended):
 ```bash
 python streamlined_float_daemon.py --config ~/float-config.json
 ```
 
-Process existing files before starting:
+Process existing files before starting monitoring:
 ```bash
 python streamlined_float_daemon.py ~/float-dropzone --process-existing
 ```
 
-With custom settings:
+With Ollama AI-powered summarization enabled:
+```bash
+python streamlined_float_daemon.py ~/float-dropzone --enable-ollama
+```
+
+Full configuration example:
 ```bash
 python streamlined_float_daemon.py ~/float-dropzone \
   --vault-path ~/my-vault \
   --chroma-path ~/my-chroma \
   --enable-ollama \
+  --process-existing \
   --max-file-size 100
 ```
 
-### File Processing
+### Content-Aware Processing
 
 1. **Drop files** into your dropzone folder
-2. **FLOAT automatically**:
-   - Extracts content and metadata
-   - Generates AI summaries (if Ollama enabled)
-   - Routes content to appropriate ChromaDB collections
-   - Creates rich `.dis` files in your Obsidian vault
-   - Updates daily context summaries
-   - Generates cross-references
+2. **FLOAT intelligently processes** each file:
+   - **Content Classification**: Detects daily logs, conversations, or general documents
+   - **Metadata Extraction**: Comprehensive file analysis and frontmatter parsing
+   - **AI-Powered Summarization**: Local Ollama models generate intelligent summaries
+   - **Pattern Detection**: Identifies 40+ FLOAT methodology patterns
+   - **Tripartite Routing**: Routes content to concept/framework/metaphor collections
+   - **Cross-Reference Generation**: Creates bidirectional links across vault content
+   - **Enhanced .dis Files**: Generates specialized documentation for different content types
+   - **Daily Context Updates**: Maintains temporal context and conversation history
+
+#### Processing Specialization by Content Type
+
+**Daily Logs** (detected via frontmatter patterns):
+- Extracts actionable items, mood indicators, and productivity signals
+- Generates AI-powered daily insights and reflection points
+- Creates specialized daily log .dis files with temporal navigation
+- Routes to all tripartite collections for comprehensive indexing
+
+**Conversations** (Claude.ai, ChatGPT exports):
+- Platform-specific metadata extraction and conversation flow analysis
+- Speaker statistics and dialogue structure analysis
+- Topic extraction and technical depth assessment
+- Enhanced conversation .dis files with Dataview integration
+
+**General Documents**:
+- Content structure analysis and FLOAT pattern recognition
+- Intelligent chunking based on document type and complexity
+- Basic .dis files with comprehensive metadata and Ollama summaries
 
 ### Supported File Types
 
@@ -185,22 +224,49 @@ Enhance your content with FLOAT methodology markers:
 - GitHub repository and issue linking
 - Build tool and deployment platform recognition
 
-### Example Workflow
+### Example Workflows
 
-1. **Export a conversation** from Claude.ai or ChatGPT
-2. **Save to dropzone** as `my-conversation.txt`
+#### Daily Log Processing
+1. **Create daily log** with YAML frontmatter:
+   ```markdown
+   ---
+   created: 2025-06-12T09:00:00
+   type: log
+   mood: "focused"
+   tags: [daily]
+   ---
+   
+   ## Brain Boot
+   ctx:: Starting the day with clear priorities
+   
+   ## Key Tasks
+   - Review FLOAT system improvements
+   - highlight:: Configuration bug fix successful
+   ```
+
+2. **FLOAT processes**:
+   - Detects as daily log via frontmatter patterns
+   - Generates AI-powered insights and mood analysis
+   - Extracts actionable items and productivity signals
+   - Creates enhanced daily log .dis file in `FLOAT.conversations/`
+   - Routes to all tripartite collections
+
+3. **Result**: Rich daily log analysis with Ollama-generated summaries
+
+#### Conversation Processing
+1. **Export conversation** from Claude.ai or ChatGPT
+2. **Save to dropzone** as JSON export or markdown
 3. **FLOAT processes**:
-   - Detects it's a conversation
-   - Extracts participants, topics, code blocks
-   - Generates comprehensive summary
-   - Creates conversation .dis file
-   - Routes to tripartite collections
-   - Updates cross-references
+   - Detects conversation platform and extracts metadata
+   - Analyzes dialogue structure and participant statistics
+   - Generates comprehensive AI summary with technical depth assessment
+   - Creates conversation .dis file with cross-references
+   - Routes to appropriate tripartite collections based on content
 
 4. **Find in Obsidian**:
-   - `FLOAT.conversations/20241208_143022_claude_ai_abc12345.conversation.float_dis.md`
-   - Rich metadata, analysis, and Templater actions
-   - Dataview queries for related content
+   - `FLOAT.conversations/20250612_143022_claude_ai_abc12345.conversation.float_dis.md`
+   - Rich metadata, AI analysis, and Dataview navigation queries
+   - Templater actions for code extraction and follow-ups
 
 ## Configuration
 
@@ -230,7 +296,7 @@ Create with: `python streamlined_float_daemon.py --create-config config.json`
 }
 ```
 
-#### AI and Enhancement
+#### AI and Enhanced Processing
 ```json
 {
   "enable_ollama": true,
@@ -238,10 +304,16 @@ Create with: `python streamlined_float_daemon.py --create-config config.json`
   "ollama_model": "llama3.1:8b",
   "enable_enhanced_integration": true,
   "enable_tripartite_routing": true,
+  "auto_update_daily_context": true,
   "special_pattern_collections": {
     "dispatch": "float_dispatch_bay",
     "rfc": "float_rfc", 
     "echo_copy": "float_echoCopy"
+  },
+  "tripartite_collections": {
+    "concept": "float_tripartite_v2_concept",
+    "framework": "float_tripartite_v2_framework",
+    "metaphor": "float_tripartite_v2_metaphor"
   },
   "enable_temporal_queries": true
 }
@@ -455,12 +527,38 @@ echo "ctx::test content highlight::important" > ~/float-dropzone/test.txt
 
 ### Common Issues
 
-**1. Ollama Connection Failed**
+**1. "AI Summary shows 'None'" - Ollama Integration Issues**
+
+This indicates Ollama is not properly enabled or configured:
+
 ```bash
-# Check Ollama status
+# Check Ollama is running
 ollama list
-# Restart if needed
+curl http://localhost:11434/api/tags
+
+# Verify FLOAT configuration
+python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Ollama enabled:', c.get('enable_ollama'))"
+
+# Check daemon status (if running)
+cat ~/float-dropzone/.daemon_status.json | grep -A 10 ollama
+```
+
+**Fix: Ensure Ollama is enabled in configuration**
+```json
+{
+  "enable_ollama": true,
+  "ollama_url": "http://localhost:11434",
+  "ollama_model": "llama3.1:8b"
+}
+```
+
+**2. Ollama Connection Failed**
+```bash
+# Check Ollama status and start if needed
+ollama list
 ollama serve
+# Pull model if missing
+ollama pull llama3.1:8b
 ```
 
 **2. ChromaDB Errors**
@@ -487,7 +585,26 @@ chmod 755 ~/float-dropzone
 ls -la ~/float-dropzone
 ```
 
-**5. Large File Processing**
+**5. Daily Logs Processed as Conversations**
+
+FLOAT now properly detects daily logs via frontmatter patterns:
+
+```yaml
+---
+type: log
+uid: log::
+title: 2025-06-12
+mood: "focused"
+tags: [daily]
+---
+```
+
+If daily logs are still misclassified, check:
+- Filename matches `YYYY-MM-DD.md` pattern
+- Content includes daily log section markers ("## Brain Boot", "## Body Boot")
+- Frontmatter contains daily log indicators
+
+**6. Large File Processing**
 - Files over 50MB are automatically previewed
 - Adjust `max_file_size_mb` in config for larger files
 - Check memory usage with performance monitor
@@ -532,11 +649,31 @@ rm ~/vault/FLOAT.conversations/_conversation_index.json
 
 ### Enhanced Integration Mode
 
-When enabled, provides:
-- **Deep conversation analysis** with speaker statistics
-- **Tripartite collection routing** based on content type
-- **Advanced cross-referencing** with vault search
-- **Rich .dis file generation** with Templater actions
+When enabled (`"enable_enhanced_integration": true`), provides:
+
+#### Content Classification
+- **Daily Log Detection**: Comprehensive frontmatter and pattern analysis
+- **Conversation Platform Detection**: Claude.ai, ChatGPT export recognition
+- **Document Structure Analysis**: Markdown, JSON, PDF intelligent processing
+- **FLOAT Pattern Recognition**: 40+ methodology patterns with signal density scoring
+
+#### AI-Powered Analysis
+- **Local Ollama Summarization**: Privacy-preserving AI analysis with specialized prompts
+- **Hierarchical Processing**: Large files split and synthesized intelligently
+- **Content-Specific Insights**: Daily log mood/productivity analysis, conversation flow analysis
+- **Cross-Reference Generation**: Automatic vault and temporal linking
+
+#### Specialized .dis File Generation
+- **Daily Log .dis Files**: Enhanced with AI insights, actionable items, mood tracking
+- **Conversation .dis Files**: Platform metadata, speaker analysis, topic extraction
+- **General Document .dis Files**: Pattern analysis, tripartite classification, cross-references
+- **Dataview Integration**: Dynamic queries for related content and navigation
+
+#### Advanced Routing
+- **Tripartite Collection System**: Intelligent concept/framework/metaphor classification
+- **Special Pattern Collections**: Dedicated routing for dispatch, RFC, echoCopy patterns
+- **Temporal Indexing**: Date-based metadata for efficient conversation queries
+- **Multi-Domain Routing**: Complex content routed to multiple collections based on confidence scoring
 
 ### Cross-Reference System
 

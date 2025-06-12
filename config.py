@@ -34,9 +34,13 @@ class FloatConfig:
             'chroma_data_path': os.getenv('FLOAT_CHROMA_PATH'),
             'dropzone_path': os.getenv('FLOAT_DROPZONE_PATH'),
             'log_dir': os.getenv('FLOAT_LOG_DIR'),
-            'ollama_url': os.getenv('OLLAMA_URL'),
-            'enable_ollama': os.getenv('FLOAT_ENABLE_OLLAMA', '').lower() == 'true'
+            'ollama_url': os.getenv('OLLAMA_URL')
         }
+        
+        # Special handling for boolean environment variables
+        float_enable_ollama = os.getenv('FLOAT_ENABLE_OLLAMA')
+        if float_enable_ollama is not None:
+            env_overrides['enable_ollama'] = float_enable_ollama.lower() == 'true'
         
         for key, value in env_overrides.items():
             if value is not None:

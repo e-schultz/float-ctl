@@ -6,10 +6,17 @@ Now includes sophisticated pattern detection from tripartite chunker
 
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
+
+try:
+    import frontmatter
+    FRONTMATTER_AVAILABLE = True
+except ImportError:
+    FRONTMATTER_AVAILABLE = False
+    frontmatter = None
 
 class EnhancedSystemIntegration:
     """Enhanced integration between daemon and daily context systems"""
@@ -64,6 +71,29 @@ class EnhancedSystemIntegration:
                 self.logger.warning("Enhanced daily context not available, using basic integration")
         except Exception as e:
             self.logger.error(f"Enhanced context initialization failed: {e}")
+        
+        # Initialize Ollama summarizer if enabled
+        self._initialize_ollama_summarizer()
+    
+    def _initialize_ollama_summarizer(self):
+        """Initialize Ollama summarizer for enhanced content analysis"""
+        try:
+            enable_ollama = self.config.get('enable_ollama', False) or \
+                          self.daemon.config.get('enable_ollama', False)
+            
+            if enable_ollama:
+                from ollama_enhanced_float_summarizer import OllamaFloatSummarizer
+                self.ollama_summarizer = OllamaFloatSummarizer()
+                self.ollama_enabled = True
+                self.logger.info("Ollama summarizer initialized for enhanced analysis")
+            else:
+                self.ollama_summarizer = None
+                self.ollama_enabled = False
+                self.logger.info("Ollama summarizer disabled")
+        except Exception as e:
+            self.logger.warning(f"Ollama summarizer initialization failed: {e}")
+            self.ollama_summarizer = None
+            self.ollama_enabled = False
     
     def _initialize_cross_reference_system(self):
         """Initialize cross-reference system"""
@@ -140,13 +170,17 @@ class EnhancedSystemIntegration:
             self.logger.warning("Cross-reference system not available - skipping cross-reference generation")
             file_analysis['cross_references'] = {'vault_references': [], 'chroma_references': [], 'conversation_links': [], 'topic_connections': []}
         
-        # Step 6: Enhanced conversation .dis file generation
+        # Step 6: Enhanced .dis file generation
         if enhanced_analysis.get('is_conversation'):
             if self.conversation_dis_enhanced:
                 conversation_dis_path = self.conversation_dis_enhanced.generate_conversation_dis(file_analysis, enhanced_analysis)
             else:
                 conversation_dis_path = self._generate_conversation_dis_file(file_analysis, enhanced_analysis)
             file_analysis['conversation_dis_path'] = conversation_dis_path
+        elif enhanced_analysis.get('content_classification') == 'daily_log':
+            # Generate enhanced daily log .dis file
+            daily_log_dis_path = self._generate_daily_log_dis_file(file_analysis, enhanced_analysis)
+            file_analysis['daily_log_dis_path'] = daily_log_dis_path
         
         # Update result with enhanced data
         result['file_analysis'] = file_analysis
@@ -245,18 +279,32 @@ class EnhancedSystemIntegration:
             self.logger.warning("Using fallback analysis - enhanced pattern detector not available")
             enhanced = self._perform_basic_enhanced_analysis(content, metadata, basic_analysis)
         
-        # Conversation detection (keep existing logic)
-        conversation_analysis = self._analyze_conversation_content(content, metadata)
-        enhanced.update(conversation_analysis)
-        
-        # Content classification
+        # Content classification FIRST - before conversation detection
         enhanced['content_classification'] = self._classify_content_type(content, basic_analysis)
+        
+        # Only run conversation detection if it's NOT a daily log
+        if enhanced['content_classification'] != 'daily_log':
+            conversation_analysis = self._analyze_conversation_content(content, metadata)
+            enhanced.update(conversation_analysis)
+        else:
+            # Set default conversation analysis for daily logs
+            enhanced.update({
+                'is_conversation': False,
+                'conversation_platform': 'unknown',
+                'conversation_id': 'unknown',
+                'participants': [],
+                'message_count': 0
+            })
         
         # Topic extraction
         enhanced['topics'] = self._extract_topics(content)
         
         # Tripartite routing decisions
         enhanced['tripartite_routing'] = self._determine_tripartite_routing(content, enhanced)
+        
+        # Special handling for daily logs
+        if enhanced.get('content_classification') == 'daily_log':
+            enhanced.update(self._analyze_daily_log_content(content, metadata))
         
         return enhanced
     
@@ -308,6 +356,355 @@ class EnhancedSystemIntegration:
         enhanced['total_signals'] = ctx_count + highlight_count
         
         return enhanced
+    
+    def is_daily_log(self, content: str, metadata: Dict) -> bool:
+        """Check if content is a daily log rather than a conversation"""
+        
+        # Priority 1: Check frontmatter for definitive daily log indicators
+        if content.startswith('---'):
+            frontmatter_end = content.find('---', 3)
+            if frontmatter_end > 0:
+                frontmatter = content[3:frontmatter_end]
+                
+                # Check for explicit daily log frontmatter patterns
+                if any(pattern in frontmatter for pattern in [
+                    'type: log',
+                    'uid: log::',
+                    'title: 2025-',  # Daily log title pattern
+                    '- daily',       # daily tag
+                    'mood: ',        # mood field
+                    'soundtrack: '   # soundtrack field
+                ]):
+                    return True
+                
+                # Check for weekly/quarterly patterns
+                if re.search(r'week: \d{4}-W\d{2}', frontmatter) or \
+                   re.search(r'quarter: \d{4}-Q[1-4]', frontmatter) or \
+                   re.search(r'y\d{4}/q[1-4]/w\d{2}', frontmatter):
+                    return True
+        
+        # Priority 2: Check filename pattern
+        filename = metadata.get('filename', '')
+        if re.match(r'^\d{4}-\d{2}-\d{2}\.md$', filename):
+            return True
+        
+        # Priority 3: Check content markers
+        content_lower = content.lower()
+        daily_log_markers = [
+            'type: log',
+            'daily log',
+            '## brain boot',
+            '## body boot',
+            '## daily tasks',
+            '## today\'s focus',
+            '<< [[float.logs/',
+            '>> [[float.logs/'
+        ]
+        
+        if any(marker in content_lower for marker in daily_log_markers):
+            return True
+        
+        # Priority 4: Check for daily log structure patterns
+        if '## Brain Boot' in content and '## Body Boot' in content:
+            return True
+        
+        # Priority 5: Check for navigation patterns specific to logs
+        if re.search(r'<< \[\[FLOAT\.logs/\d{4}-\d{2}-\d{2}\]\]', content):
+            return True
+        
+        return False
+    
+    def _extract_daily_log_frontmatter(self, content: str) -> Dict:
+        """Extract and parse daily log frontmatter using python-frontmatter library"""
+        frontmatter_data = {}
+        
+        if FRONTMATTER_AVAILABLE and frontmatter:
+            try:
+                # Parse frontmatter using the library
+                post = frontmatter.loads(content)
+                metadata = post.metadata
+                
+                # Extract key fields we care about
+                important_fields = ['created', 'uid', 'title', 'type', 'status', 'week', 'quarter', 'mood', 'soundtrack', 'tags']
+                
+                for field in important_fields:
+                    if field in metadata:
+                        frontmatter_data[field] = metadata[field]
+                
+                return frontmatter_data
+                
+            except Exception as e:
+                # Fallback to manual parsing if frontmatter library fails
+                if hasattr(self, 'logger') and self.logger:
+                    self.logger.warning(f"Frontmatter library parsing failed, using fallback: {e}")
+        
+        # Fallback manual parsing (existing logic)
+        if content.startswith('---'):
+            frontmatter_end = content.find('---', 3)
+            if frontmatter_end > 0:
+                frontmatter_section = content[3:frontmatter_end].strip()
+                
+                # Parse key frontmatter fields
+                for line in frontmatter_section.split('\n'):
+                    line = line.strip()
+                    if ':' in line and not line.startswith('-'):
+                        try:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = value.strip().strip('"').strip("'")
+                            
+                            # Store important fields
+                            if key in ['created', 'uid', 'title', 'type', 'status', 'week', 'quarter', 'mood', 'soundtrack']:
+                                frontmatter_data[key] = value
+                        except ValueError:
+                            continue
+                
+                # Extract tags separately
+                if 'tags:' in frontmatter_section:
+                    tags_section = frontmatter_section[frontmatter_section.find('tags:'):].split('\n')
+                    tags = []
+                    for line in tags_section[1:]:
+                        if line.strip().startswith('-'):
+                            tag = line.strip().lstrip('-').strip()
+                            if tag:
+                                tags.append(tag)
+                        elif not line.strip() or not line.startswith(' '):
+                            break
+                    frontmatter_data['tags'] = tags
+        
+        return frontmatter_data
+    
+    def _analyze_daily_log_content(self, content: str, metadata: Dict) -> Dict:
+        """Analyze daily log content for specific insights"""
+        analysis = {
+            'daily_log_insights': {},
+            'actionable_items': [],
+            'mood_indicators': [],
+            'productivity_signals': [],
+            'learning_notes': [],
+            'frontmatter_data': {},
+            'ollama_summary': None,
+            'ollama_insights': []
+        }
+        
+        # Extract frontmatter data
+        frontmatter_data = self._extract_daily_log_frontmatter(content)
+        analysis['frontmatter_data'] = frontmatter_data
+        
+        # Generate Ollama-powered summary and insights if available
+        if self.ollama_enabled and self.ollama_summarizer:
+            try:
+                ollama_analysis = self._generate_ollama_daily_log_analysis(content, frontmatter_data)
+                analysis['ollama_summary'] = ollama_analysis.get('summary')
+                analysis['ollama_insights'] = ollama_analysis.get('insights', [])
+                
+                # Enhance extracted items with Ollama insights
+                ollama_actionables = ollama_analysis.get('actionable_items', [])
+                if ollama_actionables:
+                    analysis['actionable_items'].extend(ollama_actionables)
+                    
+                ollama_mood = ollama_analysis.get('mood_analysis')
+                if ollama_mood:
+                    analysis['mood_indicators'].append(f"Ollama analysis: {ollama_mood}")
+                    
+            except Exception as e:
+                if hasattr(self, 'logger') and self.logger:
+                    self.logger.warning(f"Ollama daily log analysis failed: {e}")
+                analysis['ollama_summary'] = "Ollama analysis unavailable"
+        
+        # Extract actionable items from daily logs
+        action_patterns = [
+            re.compile(r'(?:TODO|FIXME|ACTION|NEXT):?\s*(.+)', re.IGNORECASE),
+            re.compile(r'- \[ \]\s*(.+)'),  # Markdown checkboxes
+            re.compile(r'(?:need to|should|must|will)\s+(.+)', re.IGNORECASE),
+            re.compile(r'(?:follow up|reach out|contact|schedule)\s+(.+)', re.IGNORECASE)
+        ]
+        
+        for pattern in action_patterns:
+            matches = pattern.findall(content)
+            analysis['actionable_items'].extend(matches[:5])  # Limit to 5 per pattern
+        
+        # Extract mood and energy indicators
+        mood_patterns = [
+            re.compile(r'(?:feeling|mood|energy):\s*([^.\n]+)', re.IGNORECASE),
+            re.compile(r'\[mood::\s*([^\]]+)\]', re.IGNORECASE),
+            re.compile(r'(?:tired|energetic|focused|distracted|motivated|anxious)\b', re.IGNORECASE)
+        ]
+        
+        for pattern in mood_patterns:
+            matches = pattern.findall(content)
+            analysis['mood_indicators'].extend(matches[:3])
+        
+        # Add frontmatter mood if available
+        frontmatter_mood = frontmatter_data.get('mood', '').strip()
+        if frontmatter_mood and frontmatter_mood != '""' and frontmatter_mood:
+            analysis['mood_indicators'].insert(0, f"Frontmatter mood: {frontmatter_mood}")
+        
+        # Extract productivity and focus signals
+        productivity_patterns = [
+            re.compile(r'(?:completed|finished|done|accomplished)\s+(.+)', re.IGNORECASE),
+            re.compile(r'(?:struggled with|difficulty|blocked by)\s+(.+)', re.IGNORECASE),
+            re.compile(r'(?:breakthrough|insight|realization)\s*:?\s*(.+)', re.IGNORECASE)
+        ]
+        
+        for pattern in productivity_patterns:
+            matches = pattern.findall(content)
+            analysis['productivity_signals'].extend(matches[:3])
+        
+        # Extract learning and reflection notes
+        learning_patterns = [
+            re.compile(r'(?:learned|discovered|realized)\s+(.+)', re.IGNORECASE),
+            re.compile(r'(?:note to self|remember|important)\s*:?\s*(.+)', re.IGNORECASE),
+            re.compile(r'(?:reflection|thinking about)\s*:?\s*(.+)', re.IGNORECASE)
+        ]
+        
+        for pattern in learning_patterns:
+            matches = pattern.findall(content)
+            analysis['learning_notes'].extend(matches[:3])
+        
+        # Analyze daily log structure
+        sections = self._analyze_daily_log_sections(content)
+        analysis['daily_log_insights'] = {
+            'has_brain_boot': '## brain boot' in content.lower(),
+            'has_body_boot': '## body boot' in content.lower(), 
+            'has_daily_tasks': '## daily tasks' in content.lower(),
+            'total_actionable_items': len(analysis['actionable_items']),
+            'mood_tracking_present': len(analysis['mood_indicators']) > 0,
+            'productivity_tracking': len(analysis['productivity_signals']) > 0,
+            'learning_capture': len(analysis['learning_notes']) > 0,
+            'log_sections': sections,
+            'signal_to_noise_ratio': self._calculate_daily_log_signal_ratio(analysis),
+            # Frontmatter insights
+            'log_date': frontmatter_data.get('created', '').split('T')[0] if frontmatter_data.get('created') else metadata.get('filename', '').replace('.md', ''),
+            'log_uid': frontmatter_data.get('uid', ''),
+            'log_status': frontmatter_data.get('status', ''),
+            'log_week': frontmatter_data.get('week', ''),
+            'log_quarter': frontmatter_data.get('quarter', ''),
+            'log_tags': frontmatter_data.get('tags', []),
+            'has_soundtrack': bool(frontmatter_data.get('soundtrack', '').strip()),
+            'soundtrack': frontmatter_data.get('soundtrack', '').strip()
+        }
+        
+        return analysis
+    
+    def _generate_ollama_daily_log_analysis(self, content: str, frontmatter_data: Dict) -> Dict:
+        """Generate Ollama-powered analysis for daily logs"""
+        try:
+            # Create a specialized prompt for daily log analysis
+            log_date = frontmatter_data.get('created', '').split('T')[0] if frontmatter_data.get('created') else 'Unknown'
+            mood = frontmatter_data.get('mood', '').strip('"')
+            
+            prompt = f"""Analyze this daily log entry from {log_date}. 
+
+Content:
+{content[:3000]}  # Limit content to avoid context overflow
+
+Please provide:
+1. A 2-3 sentence summary of the day's key activities and outcomes
+2. 3-5 actionable items or follow-ups that need attention
+3. Mood/energy assessment based on the content
+4. 2-3 key insights or learning points
+5. Overall productivity assessment
+
+Focus on extracting meaningful insights that would be useful for reflection and planning.
+
+Respond in JSON format:
+{{
+    "summary": "Brief summary of the day",
+    "actionable_items": ["item1", "item2", "item3"],
+    "mood_analysis": "mood and energy assessment", 
+    "insights": ["insight1", "insight2"],
+    "productivity_assessment": "overall productivity evaluation"
+}}"""
+
+            # Use Ollama to generate analysis
+            import requests
+            response = requests.post(
+                f"{self.ollama_summarizer.ollama_url}/api/generate",
+                json={
+                    "model": self.ollama_summarizer.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,
+                        "top_p": 0.9,
+                        "max_tokens": 400
+                    }
+                },
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                response_text = result.get('response', '').strip()
+                try:
+                    # Parse JSON response
+                    analysis_text = response_text
+                    # Handle cases where response might have markdown formatting
+                    if '```json' in analysis_text:
+                        analysis_text = analysis_text.split('```json')[1].split('```')[0]
+                    elif '```' in analysis_text:
+                        analysis_text = analysis_text.split('```')[1].split('```')[0]
+                    
+                    analysis_data = json.loads(analysis_text)
+                    return analysis_data
+                except json.JSONDecodeError as e:
+                    # Fallback if JSON parsing fails
+                    return {
+                        'summary': response_text[:200] + "..." if response_text else "No response",
+                        'actionable_items': [],
+                        'mood_analysis': mood or "Not specified",
+                        'insights': [],
+                        'productivity_assessment': "Analysis parsing failed"
+                    }
+            else:
+                return {
+                    'summary': "Ollama response unavailable",
+                    'actionable_items': [],
+                    'mood_analysis': mood or "Not specified", 
+                    'insights': [],
+                    'productivity_assessment': "Ollama unavailable"
+                }
+        except Exception as e:
+            return {
+                'summary': f"Ollama analysis failed: {str(e)}",
+                'actionable_items': [],
+                'mood_analysis': frontmatter_data.get('mood', '').strip('"') or "Not specified",
+                'insights': [],
+                'productivity_assessment': "Analysis failed"
+            }
+    
+    def _analyze_daily_log_sections(self, content: str) -> Dict:
+        """Analyze the structure of daily log sections"""
+        sections = {}
+        lines = content.split('\n')
+        current_section = None
+        
+        for line in lines:
+            if line.startswith('## '):
+                section_name = line[3:].strip().lower()
+                current_section = section_name
+                sections[section_name] = {'line_count': 0, 'has_content': False}
+            elif current_section and line.strip():
+                sections[current_section]['line_count'] += 1
+                if not line.startswith('#') and not line.startswith('---'):
+                    sections[current_section]['has_content'] = True
+        
+        return sections
+    
+    def _calculate_daily_log_signal_ratio(self, analysis: Dict) -> float:
+        """Calculate signal-to-noise ratio for daily logs"""
+        signal_count = (
+            len(analysis.get('actionable_items', [])) * 2 +  # Weight actionable items higher
+            len(analysis.get('mood_indicators', [])) +
+            len(analysis.get('productivity_signals', [])) +
+            len(analysis.get('learning_notes', []))
+        )
+        
+        # Estimate total content based on analysis length
+        total_content_estimate = len(str(analysis)) / 10  # Rough estimate
+        
+        return signal_count / max(total_content_estimate, 1)
     
     def _analyze_conversation_content(self, content: str, metadata: Dict) -> Dict:
         """Analyze content to determine if it's a conversation and extract metadata"""
@@ -425,6 +822,11 @@ class EnhancedSystemIntegration:
     def _classify_content_type(self, content: str, basic_analysis: Dict) -> str:
         """Classify content type for enhanced processing"""
         content_lower = content.lower()
+        metadata = basic_analysis.get('metadata', {})
+        
+        # Check if it's a daily log first using comprehensive detection
+        if self.is_daily_log(content, metadata):
+            return 'daily_log'
         
         # Priority classification
         if basic_analysis.get('content_type') == 'AI conversation export':
@@ -434,7 +836,10 @@ class EnhancedSystemIntegration:
         elif '"powered_by": "ChatGPT Exporter' in content:
             return 'ai_conversation_chrome_export'
         elif 'conversation' in content_lower or 'chat' in content_lower:
-            return 'conversation'
+            # Double-check it's not a daily log talking about conversations
+            metadata = basic_analysis.get('metadata', {})
+            if not self.is_daily_log(content, metadata):
+                return 'conversation'
         elif content.strip().startswith('{') or content.strip().startswith('['):
             return 'structured_data'
         elif len([line for line in content.split('\n') if line.startswith('#')]) > 3:
@@ -861,6 +1266,195 @@ LIMIT 3
 ---
 
 *Enhanced conversation processing powered by FLOAT Enhanced Integration*
+"""
+        
+        return yaml_header + content
+    
+    def _generate_daily_log_dis_file(self, file_analysis: Dict, enhanced_analysis: Dict) -> Optional[Path]:
+        """Generate enhanced .dis file specifically for daily log content"""
+        
+        try:
+            # Create daily log-specific filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            log_date = enhanced_analysis.get('daily_log_insights', {}).get('log_date', 'unknown')
+            
+            filename = f"{timestamp}_daily_log_{log_date}.float_dis.md"
+            dis_path = self.conversation_dis_path / filename
+            
+            # Generate enhanced daily log .dis content
+            dis_content = self._create_daily_log_dis_content(file_analysis, enhanced_analysis)
+            
+            # Write file
+            with open(dis_path, 'w', encoding='utf-8') as f:
+                f.write(dis_content)
+            
+            self.logger.info(f"Generated daily log .dis file: {dis_path.name}",
+                           extra={'float_id': file_analysis.get('float_id')})
+            
+            return dis_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate daily log .dis file: {e}")
+            return None
+    
+    def _create_daily_log_dis_content(self, file_analysis: Dict, enhanced_analysis: Dict) -> str:
+        """Create enhanced .dis file content for daily logs"""
+        metadata = file_analysis.get('metadata', {})
+        cross_refs = file_analysis.get('cross_references', {})
+        daily_insights = enhanced_analysis.get('daily_log_insights', {})
+        
+        # Extract log date from filename or metadata
+        filename = metadata.get('filename', '')
+        log_date = filename.replace('.md', '') if filename.endswith('.md') else 'unknown'
+        
+        # Create YAML frontmatter
+        frontmatter = {
+            'float_id': file_analysis.get('float_id'),
+            'content_type': 'daily_log',
+            'log_date': daily_insights.get('log_date', log_date),
+            'log_uid': daily_insights.get('log_uid', ''),
+            'log_status': daily_insights.get('log_status', ''),
+            'log_week': daily_insights.get('log_week', ''),
+            'log_quarter': daily_insights.get('log_quarter', ''),
+            'log_tags': daily_insights.get('log_tags', []),
+            'has_soundtrack': daily_insights.get('has_soundtrack', False),
+            'soundtrack': daily_insights.get('soundtrack', ''),
+            'filename': metadata.get('filename'),
+            'signal_density': enhanced_analysis.get('signal_density', 0),
+            'actionable_items_count': len(enhanced_analysis.get('actionable_items', [])),
+            'mood_tracking': len(enhanced_analysis.get('mood_indicators', [])) > 0,
+            'productivity_signals': len(enhanced_analysis.get('productivity_signals', [])),
+            'learning_notes': len(enhanced_analysis.get('learning_notes', [])),
+            'has_brain_boot': daily_insights.get('has_brain_boot', False),
+            'has_body_boot': daily_insights.get('has_body_boot', False),
+            'has_daily_tasks': daily_insights.get('has_daily_tasks', False),
+            'signal_to_noise_ratio': daily_insights.get('signal_to_noise_ratio', 0),
+            'processed_at': file_analysis.get('processed_at'),
+            'tripartite_routing': enhanced_analysis.get('tripartite_routing', []),
+            'file_size_bytes': metadata.get('size_bytes', 0)
+        }
+        
+        yaml_header = "---\n"
+        for key, value in frontmatter.items():
+            if value is not None:
+                yaml_header += f"{key}: {json.dumps(value) if isinstance(value, (list, dict)) else value}\n"
+        yaml_header += "---\n\n"
+        
+        # Create enhanced content
+        actionable_items = enhanced_analysis.get('actionable_items', [])
+        mood_indicators = enhanced_analysis.get('mood_indicators', [])
+        productivity_signals = enhanced_analysis.get('productivity_signals', [])
+        learning_notes = enhanced_analysis.get('learning_notes', [])
+        log_sections = daily_insights.get('log_sections', {})
+        
+        content = f"""# 📅 Daily Log Analysis: {log_date}
+
+## 🤖 AI Summary
+{enhanced_analysis.get('ollama_summary', 'Ollama summary not available')}
+
+## 📊 Log Metadata
+- **Date**: {daily_insights.get('log_date', log_date)}
+- **UID**: `{daily_insights.get('log_uid', 'N/A')}`
+- **Status**: {daily_insights.get('log_status', 'unknown').title()}
+- **Week**: {daily_insights.get('log_week', 'N/A')}
+- **Quarter**: {daily_insights.get('log_quarter', 'N/A')}
+- **Soundtrack**: {daily_insights.get('soundtrack', 'None') if daily_insights.get('has_soundtrack') else 'None'}
+
+## 🏗️ Log Structure
+- **Brain Boot**: {'✅' if daily_insights.get('has_brain_boot') else '❌'}
+- **Body Boot**: {'✅' if daily_insights.get('has_body_boot') else '❌'}
+- **Daily Tasks**: {'✅' if daily_insights.get('has_daily_tasks') else '❌'}
+- **Signal-to-Noise Ratio**: {daily_insights.get('signal_to_noise_ratio', 0):.3f}
+
+## 🏷️ Tags
+{chr(10).join([f'- #{tag}' for tag in daily_insights.get('log_tags', [])]) if daily_insights.get('log_tags') else '- No tags found'}
+
+## 📋 Actionable Items ({len(actionable_items)} found)
+{chr(10).join([f"- {item[:100]}{'...' if len(item) > 100 else ''}" for item in actionable_items[:10]]) if actionable_items else "- No actionable items detected"}
+
+## 💭 Mood & Energy Tracking
+{chr(10).join([f"- {mood}" for mood in mood_indicators[:5]]) if mood_indicators else "- No mood indicators detected"}
+
+## 🚀 Productivity Signals
+{chr(10).join([f"- {signal[:100]}{'...' if len(signal) > 100 else ''}" for signal in productivity_signals[:5]]) if productivity_signals else "- No productivity signals detected"}
+
+## 📚 Learning & Insights
+{chr(10).join([f"- {note[:100]}{'...' if len(note) > 100 else ''}" for note in learning_notes[:5]]) if learning_notes else "- No learning notes detected"}
+
+## 🎯 AI-Generated Insights
+{chr(10).join([f"- {insight}" for insight in enhanced_analysis.get('ollama_insights', [])]) if enhanced_analysis.get('ollama_insights') else "- AI insights not available"}
+
+## 📊 Section Analysis
+{chr(10).join([f"- **{section.title()}**: {data.get('line_count', 0)} lines, {'✅ has content' if data.get('has_content') else '❌ empty'}" for section, data in log_sections.items()]) if log_sections else "- No sections detected"}
+
+## 🎯 Key Metrics
+- **Total Actionable Items**: {len(actionable_items)}
+- **Mood Tracking Present**: {'Yes' if mood_indicators else 'No'}
+- **Productivity Tracking**: {'Yes' if productivity_signals else 'No'}
+- **Learning Capture**: {'Yes' if learning_notes else 'No'}
+- **Signal Density**: {enhanced_analysis.get('signal_density', 0):.4f} signals/word
+
+## 🔗 Tripartite Routing
+This daily log has been routed to:
+{chr(10).join([f"- `float_tripartite_v2_{domain}`" for domain in enhanced_analysis.get('tripartite_routing', [])]) if enhanced_analysis.get('tripartite_routing') else "- No tripartite routing"}
+
+## 🗂️ Navigation
+
+### Related Daily Logs
+```dataview
+LIST
+FROM "FLOAT.logs"
+WHERE file.name != this.file.name
+AND file.name CONTAINS "{log_date[:7]}"
+SORT file.name DESC
+LIMIT 5
+```
+
+### Action Items Follow-up
+```dataview
+TASK
+WHERE !completed
+AND contains(text, "{log_date}")
+```
+
+### Mood Patterns
+```dataview
+TABLE mood_tracking, signal_to_noise_ratio
+FROM #daily-log
+WHERE mood_tracking = true
+SORT file.ctime DESC
+LIMIT 10
+```
+
+## 🛠️ Quick Actions
+
+### Daily Log Review
+- **Yesterday**: [[{(datetime.strptime(log_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d') if log_date != 'unknown' else 'unknown'}]]
+- **Tomorrow**: [[{(datetime.strptime(log_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d') if log_date != 'unknown' else 'unknown'}]]
+- **Weekly Review**: Create weekly summary from {log_date}
+
+### Extract Actions
+Use Templater to extract actionable items:
+```javascript
+// Extract all actionable items
+const actionItems = {json.dumps(actionable_items[:5], indent=2) if actionable_items else '[]'};
+```
+
+## 📈 Analysis Summary
+- **Overall Quality**: {'High' if daily_insights.get('signal_to_noise_ratio', 0) > 0.3 else 'Medium' if daily_insights.get('signal_to_noise_ratio', 0) > 0.1 else 'Low'}
+- **Actionability**: {'High' if len(actionable_items) > 5 else 'Medium' if len(actionable_items) > 0 else 'Low'}
+- **Self-Awareness**: {'High' if mood_indicators and productivity_signals else 'Medium' if mood_indicators or productivity_signals else 'Low'}
+- **Learning Value**: {'High' if len(learning_notes) > 3 else 'Medium' if len(learning_notes) > 0 else 'Low'}
+
+## 📝 Processing Details
+- **Float ID**: `{file_analysis.get('float_id')}`
+- **Original File**: `{metadata.get('filename', 'Unknown')}`
+- **Processed**: {file_analysis.get('processed_at', 'Unknown')}
+- **File Size**: {metadata.get('size_bytes', 0):,} bytes
+
+---
+
+*Enhanced daily log analysis powered by FLOAT Enhanced Integration*
 """
         
         return yaml_header + content
