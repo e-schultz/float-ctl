@@ -15,6 +15,7 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 - **Generates** rich `.dis` files for Obsidian with enhanced metadata and cross-references
 - **Maintains** daily context summaries and conversation analysis with temporal indexing
 - **Provides** comprehensive monitoring, logging, error recovery, and health checks
+- **Includes** floatctl CLI for direct file processing and search with FloatQL syntax
 
 ## Architecture
 
@@ -230,6 +231,76 @@ Enhance your content with FLOAT methodology markers:
 - Automatic detection of lovable.dev, v0.dev, magicpatterns.com references
 - GitHub repository and issue linking
 - Build tool and deployment platform recognition
+
+## floatctl CLI
+
+### Command-Line Interface
+
+FLOAT includes `floatctl`, a powerful command-line interface that provides direct access to the lf1m processing engine:
+
+```bash
+# Install dependencies (if not already installed)
+pip install -r requirements.txt
+
+# Basic file processing
+floatctl process /path/to/document.md
+
+# Search across collections
+floatctl search "machine learning patterns"
+
+# FloatQL pattern queries
+floatctl query "ctx::temporal OR highlight::important"
+
+# Check daemon status
+floatctl daemon status
+
+# List ChromaDB collections
+floatctl collections
+```
+
+### Available Commands
+
+#### File Processing
+```bash
+floatctl process /path/to/file.txt           # Process single file
+floatctl process-folder /path/to/folder      # Process folder (non-recursive)
+floatctl process-folder /path/to/folder -r   # Process folder recursively
+```
+
+#### Search & Query Operations
+```bash
+floatctl search "query text"                 # Basic text search
+floatctl query "ctx::pattern"                # FloatQL pattern search
+floatctl search "text" --collections=concept,framework  # Collection filtering
+floatctl search "text" --limit=10            # Limit results
+```
+
+#### System Management
+```bash
+floatctl daemon status                       # Check daemon status
+floatctl collections                         # List all collections
+floatctl collections --details               # Detailed collection info
+```
+
+#### FloatQL Syntax
+
+Search using FLOAT :: notation patterns:
+```bash
+floatctl query "ctx::morning"               # Context markers
+floatctl query "highlight::insights"        # Highlighted content
+floatctl query "[karen::editorial]"         # Persona annotations
+floatctl query "[sysop::technical]"         # System operator notes
+floatctl query "signal::important"          # Signal markers
+```
+
+### CLI Features
+
+- **Unified Processing**: Uses same enhanced integration as daemon
+- **Pattern Recognition**: Full access to 40+ FLOAT pattern types
+- **Collection Awareness**: Automatic tripartite collection targeting
+- **Rich Output**: Formatted results with metadata and relevance scoring
+- **Error Recovery**: Graceful fallbacks and detailed error messages
+- **Configuration**: Shares config with daemon, supports overrides
 
 ### Example Workflows
 
@@ -816,10 +887,10 @@ Configure webhooks for external notifications:
 ## Support and Development
 
 ### Version Information
-- **Current Version**: 2.3.0
+- **Current Version**: 2.5.0
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
-- **Major Features**: Content deduplication, smart routing, enhanced AI integration
+- **Major Features**: floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
 
 ### Contributing
 

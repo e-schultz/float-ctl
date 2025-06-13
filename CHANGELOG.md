@@ -1,5 +1,229 @@
 # FLOAT Ecosystem Changelog
 
+## Version 2.5.0 - floatctl CLI Integration ✅
+**Release Date:** 2025-06-13
+
+### 🚀 Major Features Completed
+
+#### floatctl CLI MVP Implementation
+- **NEW**: Command-line interface exposing lf1m daemon functionality directly
+- **ADDED**: `floatctl` command with subcommands for file processing, search, and daemon management
+- **IMPLEMENTED**: FloatQL parser for :: notation patterns in search queries  
+- **INTEGRATED**: Direct access to enhanced integration system and ChromaDB collections
+- **VERIFIED**: Working CLI commands with proper error handling and output formatting
+
+#### Core LF1M Processing Engine
+- **EXTRACTED**: Core processing logic from streamlined daemon into standalone `LF1M` class
+- **MODULAR**: Reusable processing engine that works in both CLI and daemon contexts
+- **ENHANCED**: Direct integration with enhanced_integration.py for sophisticated content analysis
+- **OPTIMIZED**: Single initialization with shared configuration across CLI operations
+
+#### File Processing Commands
+- **IMPLEMENTED**: `floatctl process /path/to/file.txt` - Process single files through FLOAT pipeline
+- **ADDED**: `floatctl process-folder /path/to/folder [--recursive]` - Batch file processing
+- **ENHANCED**: Rich output with processing results, float IDs, and error handling
+- **VERIFIED**: Full integration with enhanced pattern detection and tripartite routing
+
+#### Search Operations with FloatQL
+- **NEW**: `floatctl search "query text"` - Text search across ChromaDB collections
+- **IMPLEMENTED**: `floatctl query "ctx::pattern"` - FloatQL syntax for FLOAT pattern searches
+- **ADDED**: Collection filtering with `--collections` flag for targeted searches
+- **ENHANCED**: Search result formatting with relevance scoring and metadata display
+
+#### Daemon Management Commands  
+- **ADDED**: `floatctl daemon status` - Check lf1m daemon status and health
+- **IMPLEMENTED**: `floatctl collections` - List ChromaDB collections with document counts
+- **INTEGRATED**: Status reporting from existing daemon infrastructure
+- **VERIFIED**: Proper daemon communication and status retrieval
+
+### 🏗️ Architecture Improvements
+
+#### CLI Framework Structure
+```
+floatctl/
+├── __init__.py              # Package initialization
+├── cli.py                   # Main CLI entry point with Click framework
+├── core/
+│   ├── __init__.py          # Core module initialization  
+│   └── lf1m.py              # LF1M processing engine (extracted from daemon)
+├── commands/
+│   ├── __init__.py          # Commands module initialization
+│   ├── process.py           # File and folder processing commands
+│   ├── search.py            # Search and query commands with FloatQL
+│   ├── daemon.py            # Daemon management commands
+│   └── collections.py      # Collection listing and management
+└── parsers/
+    ├── __init__.py          # Parsers module initialization
+    └── floatql.py           # FloatQL syntax parser for :: patterns
+```
+
+#### LF1M Core Engine Design
+```python
+class LF1M:
+    """Core FLOAT processing engine extracted from daemon"""
+    
+    def __init__(self, config_path: str = None, **config_overrides):
+        # Configuration and component initialization
+        
+    def process_file(self, file_path: Path) -> Dict[str, Any]:
+        # Main entry point for CLI processing
+        
+    def search_collections(self, query: str, collections: List[str] = None) -> List[Dict]:
+        # ChromaDB search operations
+        
+    def get_daemon_status(self) -> Dict[str, Any]:
+        # Daemon status and health reporting
+```
+
+#### FloatQL Parser Implementation
+- **PATTERN RECOGNITION**: Parses :: notation patterns (ctx::, highlight::, signal::, etc.)
+- **COLLECTION MAPPING**: Maps pattern types to appropriate ChromaDB collections
+- **QUERY TRANSLATION**: Converts FloatQL syntax to ChromaDB query parameters
+- **METADATA FILTERING**: Advanced filtering using FLOAT pattern metadata
+
+### 📊 CLI Command Examples
+
+#### File Processing Operations
+```bash
+# Process single file
+floatctl process ~/dropzone/conversation.json
+
+# Process folder recursively  
+floatctl process-folder ~/Documents/notes --recursive
+
+# Process folder non-recursively
+floatctl process-folder ~/Downloads
+```
+
+#### Search and Query Operations
+```bash
+# Basic text search across default collections
+floatctl search "machine learning patterns"
+
+# FloatQL pattern search
+floatctl query "ctx::temporal"
+floatctl query "highlight::important"
+floatctl query "[karen::editorial]"
+
+# Search specific collections
+floatctl search "AI conversation" --collections=concept,framework
+
+# Limit search results
+floatctl search "development workflow" --limit=5
+```
+
+#### System Management Commands
+```bash
+# Check daemon status
+floatctl daemon status
+
+# List all collections with counts
+floatctl collections
+
+# Get collection details
+floatctl collections --details
+```
+
+### 🔧 Technical Implementation Details
+
+#### Enhanced Integration Bridge
+- **SEAMLESS**: CLI uses same enhanced_integration.py as daemon for consistent processing
+- **SHARED CONFIG**: Common configuration system between CLI and daemon operations
+- **PATTERN DETECTION**: Full access to 40+ FLOAT pattern types through CLI
+- **TRIPARTITE ROUTING**: CLI processing uses same intelligent routing as daemon
+
+#### ChromaDB Integration  
+- **DIRECT ACCESS**: CLI connects directly to ChromaDB using daemon's connection settings
+- **COLLECTION AWARENESS**: Automatic discovery and targeting of tripartite collections
+- **METADATA PRESERVATION**: Full metadata access in search results
+- **PERFORMANCE**: Optimized queries with distance-based sorting
+
+#### Error Handling & Recovery
+- **GRACEFUL DEGRADATION**: CLI falls back to basic processing when enhanced systems unavailable
+- **COMPREHENSIVE LOGGING**: Detailed error messages and processing information
+- **USER-FRIENDLY OUTPUT**: Clear success/failure indication with actionable error messages
+- **CONFIG VALIDATION**: Automatic configuration validation with helpful error messages
+
+### 🐛 Bug Fixes & Improvements
+
+#### Configuration Management
+- **UNIFIED**: Shared configuration system between CLI and daemon
+- **VALIDATED**: Automatic path validation and expansion for CLI operations
+- **FLEXIBLE**: Support for config file overrides and environment variables
+- **ROBUST**: Proper error handling for missing or invalid configuration
+
+#### Processing Pipeline Integration
+- **CONSISTENT**: CLI processing uses identical pipeline to daemon processing
+- **COMPLETE**: Full integration with Ollama summarization and enhanced analysis
+- **RELIABLE**: Proper error recovery and fallback mechanisms
+- **EFFICIENT**: Optimized initialization reduces CLI startup time
+
+### 📝 Usage Documentation
+
+#### Getting Started
+```bash
+# Install dependencies (if not already installed)
+pip install -r requirements.txt
+
+# Basic usage - process a file
+floatctl process /path/to/document.md
+
+# Search for content
+floatctl search "topic keywords"
+
+# Check system status
+floatctl daemon status
+```
+
+#### Advanced Usage Examples
+```bash
+# Process entire folder with detailed output
+floatctl process-folder ~/research --recursive --verbose
+
+# Complex FloatQL queries
+floatctl query "ctx::morning AND highlight::insights"
+floatctl query "[sysop::technical] OR [qtb::creative]"
+
+# Targeted collection searches
+floatctl search "framework patterns" --collections=framework,concept --limit=10
+```
+
+#### Configuration Options
+- **Config File**: Uses same `float-config.json` as daemon
+- **Environment Variables**: Supports all FLOAT_* environment variables
+- **CLI Overrides**: Command-line flags can override config settings
+- **Auto-Discovery**: Automatically discovers ChromaDB and vault paths
+
+### 🔄 Migration & Compatibility
+
+#### Backward Compatibility
+- **DAEMON UNCHANGED**: Existing daemon operations continue to work unchanged
+- **CONFIG SHARED**: CLI uses existing configuration files and settings
+- **COLLECTIONS COMPATIBLE**: CLI works with existing ChromaDB collections and data
+- **NO BREAKING CHANGES**: All existing workflows remain functional
+
+#### Integration Benefits
+- **UNIFIED PROCESSING**: Same advanced processing available in CLI and daemon
+- **CONSISTENT RESULTS**: Identical pattern detection and routing logic
+- **SHARED INFRASTRUCTURE**: Leverages existing monitoring, logging, and error recovery
+- **CONFIGURATION SYNC**: Changes to config affect both CLI and daemon operations
+
+### 🎯 Future CLI Enhancements
+
+#### Planned Commands
+- **Bridge Operations**: `floatctl bridge restore|update|query` for cross-platform connections
+- **Daemon Control**: `floatctl daemon start|stop|restart` for daemon lifecycle management  
+- **Batch Operations**: `floatctl reprocess-dropzone` for bulk reprocessing
+- **Plugin Interface**: `floatctl plugin list|install|run` for extensible functionality
+
+#### Advanced Features
+- **Interactive Mode**: `floatctl shell` for REPL-style operations
+- **Batch Scripts**: Support for CLI script files with multiple operations
+- **Export Operations**: `floatctl export` for data extraction and migration
+- **Health Monitoring**: Enhanced system health and performance reporting
+
+---
+
 ## Version 2.4.0 - Comprehensive Testing Framework ✅
 **Release Date:** 2025-06-13
 
