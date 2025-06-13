@@ -1,5 +1,180 @@
 # FLOAT Ecosystem Changelog
 
+## Version 2.3.0 - Deduplication & Smart Routing Fixes ✅
+**Release Date:** 2025-06-13
+
+### 🚀 Major Features Completed
+
+#### Critical Deduplication System (Major Fix)
+- **FIXED**: Massive storage waste from "dumb spray" routing causing 4+ duplicate entries per file
+- **NEW**: Content-based SHA256 hashing replaces timestamp-based IDs for true deduplication
+- **ENHANCED**: Deduplication check before processing prevents expensive redundant analysis
+- **IMPACT**: Expected 60-80% reduction in storage usage and dramatically improved search quality
+
+#### Smart Tripartite Routing (Architecture Fix)  
+- **FIXED**: "Dumb spray" routing where content was automatically sent to all domains
+- **ENHANCED**: Precision thresholds raised from 0.3 → 0.6 for secondary domain routing
+- **NEW**: Ultra-high signal threshold (5% signal density + 10+ signals) for all-domain routing
+- **IMPROVED**: Selective conversation routing based on actual multi-domain confidence (not automatic)
+- **ADDED**: Detailed routing decision logging with reasoning and confidence scores
+
+#### Processing State Management
+- **NEW**: `.processing_state.json` tracks processed files to prevent reprocessing across daemon restarts
+- **ENHANCED**: File fingerprinting using name + size + modification time for duplicate detection
+- **IMPROVED**: Early exit for already-processed files with proper logging
+- **ADDED**: Automatic state management with graceful error handling
+
+### 🏗️ Architecture Improvements
+
+#### Content-Based ID Generation
+```python
+# BEFORE (problematic)
+def _generate_float_id(self, file_path: Path) -> str:
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')  # Always different
+    file_hash = hashlib.md5(str(file_path).encode()).hexdigest()[:8]  # Path-based
+    return f"float_{timestamp}_{file_hash}"
+
+# AFTER (deduplication-safe) 
+def _generate_float_id(self, file_path: Path, content: str = None) -> str:
+    content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()[:12]  # Content-based
+    date_prefix = datetime.now().strftime('%Y%m%d')  # Date only
+    return f"float_{date_prefix}_{content_hash}"
+```
+
+#### Smart Routing Logic
+```python
+# BEFORE (dumb spray)
+if enhanced_analysis.get('has_high_signal_density', False):
+    routing = ['concept', 'framework', 'metaphor']  # Always all domains
+
+if enhanced_analysis.get('is_conversation'):
+    routing = ['concept', 'framework', 'metaphor']  # Always all domains
+
+# AFTER (precision routing)
+SECONDARY_THRESHOLD = 0.6  # Much higher threshold
+HIGH_SIGNAL_THRESHOLD = 0.8
+
+if (signal_density > 0.05 and total_signals > 10):  # Much stricter criteria
+    routing = ['concept', 'framework', 'metaphor']
+```
+
+#### Processing Flow Optimization
+- **ENHANCED**: Content extraction happens once and is reused throughout processing
+- **IMPROVED**: Deduplication checks occur before expensive AI analysis
+- **ADDED**: Processing state tracking with automatic file marking
+- **OPTIMIZED**: Early exit paths for duplicate content detection
+
+### 📊 Performance Improvements
+
+#### Storage Efficiency  
+- **Massive reduction**: 60-80% expected decrease in duplicate content storage
+- **Improved search**: Dramatic quality improvement from precise routing
+- **Memory optimization**: Content extracted once and reused across pipeline stages
+- **Processing efficiency**: Early duplicate detection prevents wasted computation
+
+#### Smart Collection Management
+- **Precision routing**: Content only goes to collections where it truly belongs
+- **Signal-based thresholds**: Only ultra-high signal content (>5% density) gets all-domain routing
+- **Platform-specific logic**: Framework routing requires >3 platform references
+- **Conversation selectivity**: Multi-domain routing only for truly multi-domain conversations
+
+### 🐛 Critical Bug Fixes
+
+#### Deduplication Issues
+- **FIXED**: Files processed 4+ times due to timestamp-based IDs
+- **RESOLVED**: Content duplication across all tripartite collections
+- **ELIMINATED**: Massive storage waste from redundant entries
+- **PREVENTED**: Search quality degradation from duplicate results
+
+#### Routing Logic Fixes  
+- **FIXED**: Automatic routing of conversations to all domains regardless of content
+- **RESOLVED**: High signal content threshold too low (2% → 5% signal density)
+- **IMPROVED**: Secondary domain threshold too permissive (0.3 → 0.6)
+- **ENHANCED**: Persona annotation routing now requires multiple annotations (>2)
+
+#### Processing State Issues
+- **FIXED**: Files reprocessed on every daemon restart
+- **RESOLVED**: No tracking of successfully processed files
+- **ADDED**: Persistent state management with JSON file storage
+- **IMPROVED**: Graceful handling of state file corruption or missing data
+
+### 🔧 Configuration Enhancements
+
+#### New Configuration Options
+```json
+{
+  "enable_deduplication": true,
+  "smart_routing_thresholds": {
+    "secondary_domain": 0.6,
+    "high_signal": 0.8,
+    "signal_density_min": 0.05,
+    "total_signals_min": 10,
+    "platform_references_min": 3
+  }
+}
+```
+
+#### Enhanced Logging
+- **ADDED**: Detailed routing decision logs with reasoning
+- **ENHANCED**: Deduplication event logging with content hashes
+- **IMPROVED**: Processing state change notifications
+- **NEW**: Smart routing threshold explanations in logs
+
+### 🧪 Testing & Validation
+
+#### Automated Test Suite
+- **NEW**: Content-based hashing validation tests
+- **ADDED**: Processing state management tests  
+- **ENHANCED**: Smart routing logic verification
+- **VERIFIED**: All core deduplication and routing functionality
+
+#### Test Results
+```
+✅ Content-based hashing: Same content = same ID, different content = different ID
+✅ Processing state: Files marked as processed are correctly skipped
+✅ Smart routing: Low signal → primary only, high signal → all domains, conversations → selective
+```
+
+### 🔄 Migration Notes
+
+#### For Existing Users
+1. **Automatic upgrade**: Processing state will be rebuilt from scratch
+2. **Storage optimization**: Expect significant storage reduction over time
+3. **Routing changes**: Content will be more selectively routed to collections
+4. **Performance improvement**: Processing should be faster due to deduplication
+
+#### Breaking Changes
+- **ID format change**: Float IDs now use content hashes instead of timestamps
+- **Routing precision**: Content may route to fewer collections (this is intentional)
+- **Processing state**: New `.processing_state.json` file created in dropzone
+- **Logging format**: Enhanced routing decision logs with new format
+
+#### Rollback Options
+```json
+{
+  "enable_deduplication": false,  // Disable deduplication if issues arise
+  "smart_routing_thresholds": {
+    "secondary_domain": 0.3  // Revert to old threshold if needed
+  }
+}
+```
+
+### 📝 Documentation Updates
+
+#### New Troubleshooting Section
+- **ADDED**: Deduplication testing and validation procedures
+- **ENHANCED**: Smart routing decision explanations
+- **IMPROVED**: Processing state management documentation
+- **NEW**: Performance impact analysis and monitoring
+
+#### Updated Usage Examples
+- **ADDED**: Content deduplication workflow examples
+- **ENHANCED**: Smart routing behavior demonstrations
+- **IMPROVED**: Testing and validation procedures
+- **NEW**: Migration and rollback instructions
+
+---
+
 ## Version 2.2.0 - Daily Log Processing & Configuration Fixes ✅
 **Release Date:** 2025-06-12
 

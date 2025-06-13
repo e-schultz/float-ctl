@@ -7,10 +7,11 @@ A comprehensive file processing and knowledge management system that automates t
 FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management system that:
 
 - **Monitors** a dropzone folder for new files with real-time processing
+- **Deduplicates** content using advanced content-based hashing to prevent storage waste
 - **Processes** various file types (text, markdown, JSON, PDF, Word docs) with content-aware analysis
 - **Analyzes** content using local AI-powered summarization (Ollama) with specialized prompts
 - **Classifies** content intelligently (daily logs vs conversations vs general documents)
-- **Stores** content in ChromaDB with sophisticated tripartite collection routing
+- **Routes** content smartly to ChromaDB with precision tripartite collection routing
 - **Generates** rich `.dis` files for Obsidian with enhanced metadata and cross-references
 - **Maintains** daily context summaries and conversation analysis with temporal indexing
 - **Provides** comprehensive monitoring, logging, error recovery, and health checks
@@ -165,6 +166,7 @@ python streamlined_float_daemon.py ~/float-dropzone \
    - **AI-Powered Summarization**: Local Ollama models generate intelligent summaries
    - **Pattern Detection**: Identifies 40+ FLOAT methodology patterns
    - **Tripartite Routing**: Routes content to concept/framework/metaphor collections
+   - **Smart Deduplication**: Prevents duplicate content storage using content-based hashing
    - **Cross-Reference Generation**: Creates bidirectional links across vault content
    - **Enhanced .dis Files**: Generates specialized documentation for different content types
    - **Daily Context Updates**: Maintains temporal context and conversation history
@@ -343,21 +345,27 @@ export OLLAMA_URL=http://localhost:11434
 export FLOAT_ENABLE_OLLAMA=true
 ```
 
-### Tripartite Collections
+### Smart Tripartite Collections
 
-Content is intelligently routed to specialized collections using enhanced pattern analysis:
+Content is intelligently routed to specialized collections using enhanced pattern analysis with strict precision thresholds to prevent "dumb spray" routing:
 
 - **Concept Collection** (`float_tripartite_v2_concept`): Definitions, theories, principles, abstract ideas
   - Optimized for precision (600/1200 char chunks)
-  - High-confidence classification for conceptual content
+  - High-confidence classification (>0.6 threshold) for conceptual content
   
 - **Framework Collection** (`float_tripartite_v2_framework`): Processes, methods, systems, workflows
   - Optimized for structure (900/1800 char chunks)
-  - Platform integration and build tool references
+  - Platform integration and build tool references (>3 platform refs required)
   
 - **Metaphor Collection** (`float_tripartite_v2_metaphor`): Analogies, experiences, intuitions, narratives
   - Optimized for resonance (800/1600 char chunks)
   - Persona annotations and experiential content
+
+**Smart Routing Features:**
+- **Content-based deduplication** prevents duplicate storage across collections
+- **Precision thresholds** (0.6 for secondary domains) reduce noise
+- **Signal density analysis** (>5% + 10+ signals) for ultra-high value content
+- **Selective conversation routing** based on actual multi-domain confidence
 
 ### Special Pattern Collections
 
@@ -726,9 +734,10 @@ Configure webhooks for external notifications:
 ## Support and Development
 
 ### Version Information
-- **Current Version**: 1.0
+- **Current Version**: 2.3.0
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
+- **Major Features**: Content deduplication, smart routing, enhanced AI integration
 
 ### Contributing
 

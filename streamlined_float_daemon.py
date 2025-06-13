@@ -55,6 +55,10 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         self.auto_update_daily_context = self.config.get('auto_update_daily_context', True)
         self.max_file_size_mb = self.config.get('max_file_size_mb', 50)
         
+        # Add processing state tracking
+        self.processing_state_file = self.dropzone_path / '.processing_state.json'
+        self.processed_files = self._load_processing_state()
+        
         # Ensure dropzone exists
         self.dropzone_path.mkdir(parents=True, exist_ok=True)
         
@@ -226,11 +230,42 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         
         start_time = time.time()
         
-        # Step 1: Generate float ID for tracking
-        float_id = self._generate_float_id(file_path)
+        # Step 0: Check if file was already processed
+        existing_float_id = self._is_file_processed(file_path)
+        if existing_float_id:
+            self.logger.info(f"File already processed, skipping", 
+                           extra={'file_name': file_path.name, 'float_id': existing_float_id, 'event': 'duplicate_skipped'})
+            return {
+                'float_id': existing_float_id,
+                'duplicate_skipped': True,
+                'processed_at': datetime.now().isoformat()
+            }
         
-        # Step 2: Use comprehensive context aggregator for file analysis
-        file_analysis = self._analyze_file_with_comprehensive_system(file_path, float_id)
+        # Step 1: Extract content first for content-based float ID
+        file_metadata = self._extract_file_metadata(file_path)
+        content = self._extract_file_content(file_path, file_metadata)
+        
+        # Step 2: Generate content-based float ID
+        float_id = self._generate_float_id(file_path, content)
+        
+        # Step 3: Check for content duplicates before processing
+        all_collections = [
+            'float_dropzone_comprehensive',
+            'float_tripartite_v2_concept',
+            'float_tripartite_v2_framework', 
+            'float_tripartite_v2_metaphor'
+        ]
+        
+        if self._check_content_exists(float_id, all_collections):
+            self._mark_file_processed(file_path, float_id)
+            return {
+                'float_id': float_id,
+                'duplicate_skipped': True,
+                'processed_at': datetime.now().isoformat()
+            }
+        
+        # Step 4: Use comprehensive context aggregator for file analysis
+        file_analysis = self._analyze_file_with_comprehensive_system(file_path, float_id, content, file_metadata)
         
         # Initialize performance tracking
         file_size = file_analysis['metadata'].get('size_bytes', 0)
@@ -313,6 +348,9 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
                 True
             )
             
+            # Mark file as processed for future deduplication
+            self._mark_file_processed(file_path, float_id)
+            
             return {
                 'float_id': float_id,
                 'dis_file': dis_file_path,
@@ -337,26 +375,100 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         
         self.logger.info("FLOAT daemon shutdown complete")
     
-    def _generate_float_id(self, file_path: Path) -> str:
-        """Generate unique float ID for the file."""
+    def _generate_float_id(self, file_path: Path, content: str = None) -> str:
+        """Generate content-based float ID to prevent duplicates."""
         import hashlib
         
-        # Use file path + timestamp for uniqueness
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        file_hash = hashlib.md5(str(file_path).encode()).hexdigest()[:8]
+        # Use content hash as primary ID component
+        if content:
+            content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()[:12]
+        else:
+            # Fallback to file content if available
+            try:
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+                content_hash = hashlib.sha256(file_content).hexdigest()[:12]
+            except:
+                # Last resort: use file path + size
+                stat = file_path.stat()
+                content_hash = hashlib.md5(f"{file_path.name}_{stat.st_size}".encode()).hexdigest()[:12]
         
-        return f"float_{timestamp}_{file_hash}"
+        # Add minimal timestamp for human readability
+        date_prefix = datetime.now().strftime('%Y%m%d')
+        return f"float_{date_prefix}_{content_hash}"
     
-    def _analyze_file_with_comprehensive_system(self, file_path: Path, float_id: str) -> Dict:
+    def _check_content_exists(self, float_id: str, collections: List[str]) -> bool:
+        """Check if content already exists in any collection."""
+        try:
+            for collection_name in collections:
+                collection = self.components['context'].client.get_collection(collection_name)
+                existing = collection.get(
+                    where={"float_id": float_id},
+                    limit=1
+                )
+                if existing['ids']:
+                    self.logger.info(f"Content already exists in {collection_name}", 
+                                   extra={'float_id': float_id, 'event': 'duplicate_skipped'})
+                    return True
+            return False
+        except Exception as e:
+            self.logger.warning(f"Deduplication check failed: {e}")
+            return False  # Proceed with processing if check fails
+    
+    def _load_processing_state(self) -> Dict:
+        """Load processing state to prevent reprocessing."""
+        import json
+        try:
+            if self.processing_state_file.exists():
+                with open(self.processing_state_file, 'r') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            if hasattr(self, 'logger'):
+                self.logger.warning(f"Failed to load processing state: {e}")
+            return {}
+    
+    def _save_processing_state(self):
+        """Save processing state."""
+        import json
+        try:
+            with open(self.processing_state_file, 'w') as f:
+                json.dump(self.processed_files, f, indent=2)
+        except Exception as e:
+            self.logger.warning(f"Failed to save processing state: {e}")
+    
+    def _mark_file_processed(self, file_path: Path, float_id: str):
+        """Mark file as processed."""
+        file_key = f"{file_path.name}_{file_path.stat().st_size}_{file_path.stat().st_mtime}"
+        self.processed_files[file_key] = {
+            'float_id': float_id,
+            'processed_at': datetime.now().isoformat(),
+            'file_path': str(file_path)
+        }
+        self._save_processing_state()
+    
+    def _is_file_processed(self, file_path: Path) -> Optional[str]:
+        """Check if file was already processed."""
+        try:
+            file_key = f"{file_path.name}_{file_path.stat().st_size}_{file_path.stat().st_mtime}"
+            if file_key in self.processed_files:
+                return self.processed_files[file_key]['float_id']
+            return None
+        except:
+            return None
+    
+    def _analyze_file_with_comprehensive_system(self, file_path: Path, float_id: str, content: str = None, file_metadata: Dict = None) -> Dict:
         """
         Analyze file using the comprehensive context aggregator's file analysis capabilities.
         """
         
-        # Detect file type and extract metadata
-        file_metadata = self._extract_file_metadata(file_path)
+        # Use provided metadata or extract it
+        if file_metadata is None:
+            file_metadata = self._extract_file_metadata(file_path)
         
-        # Extract content using the context aggregator's methods
-        content = self._extract_file_content(file_path, file_metadata)
+        # Use provided content or extract it
+        if content is None:
+            content = self._extract_file_content(file_path, file_metadata)
         
         # Perform content analysis
         content_analysis = self._analyze_content_patterns(content, file_metadata)

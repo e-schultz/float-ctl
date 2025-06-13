@@ -870,49 +870,73 @@ Respond in JSON format:
         
         # Use enhanced pattern detector classification if available
         if 'tripartite_domain' in enhanced_analysis:
-            primary_domain = enhanced_analysis.get('tripartite_domain', 'concept')
-            confidence = enhanced_analysis.get('tripartite_confidence', 0.0)
-            scores = enhanced_analysis.get('tripartite_scores', {})
-            
-            routing = []
-            
-            # Always include the primary domain
-            routing.append(primary_domain)
-            
-            # Include secondary domains if they have significant scores
-            confidence_threshold = 0.3
-            for domain, score in scores.items():
-                normalized_score = score / max(sum(scores.values()), 1)
-                if domain != primary_domain and normalized_score > confidence_threshold:
-                    routing.append(domain)
-            
-            # Special routing rules for high-signal content
-            if enhanced_analysis.get('has_high_signal_density', False):
-                # High-signal content goes to all domains
-                routing = ['concept', 'framework', 'metaphor']
-            
-            # Conversation-specific routing
-            if enhanced_analysis.get('is_conversation'):
-                # Conversations often contain all three elements
-                if len(routing) == 1:  # If only primary domain, add others
-                    for domain in ['concept', 'framework', 'metaphor']:
-                        if domain not in routing:
-                            routing.append(domain)
-            
-            # Platform integration content goes to framework
-            if enhanced_analysis.get('has_platform_integration', False):
-                if 'framework' not in routing:
-                    routing.append('framework')
-            
-            # Persona annotations indicate high-value content for all domains
-            if enhanced_analysis.get('has_persona_annotations', False):
-                routing = ['concept', 'framework', 'metaphor']
-            
-            return routing
+            return self._determine_tripartite_routing_smart(content, enhanced_analysis)
         
         else:
             # Fallback to basic keyword-based routing
             return self._basic_tripartite_routing(content, enhanced_analysis)
+    
+    def _determine_tripartite_routing_smart(self, content: str, enhanced_analysis: Dict) -> List[str]:
+        """Determine tripartite routing with MUCH higher thresholds to prevent 'dumb spray'."""
+        
+        primary_domain = enhanced_analysis.get('tripartite_domain', 'concept')
+        confidence = enhanced_analysis.get('tripartite_confidence', 0.0)
+        scores = enhanced_analysis.get('tripartite_scores', {})
+        
+        routing = [primary_domain]  # Always include primary
+        
+        # MUCH HIGHER thresholds for secondary domains
+        SECONDARY_THRESHOLD = 0.6  # Was 0.3, now 0.6
+        HIGH_SIGNAL_THRESHOLD = 0.8  # New threshold for multi-domain
+        
+        # Only add secondary domains with high confidence
+        for domain, score in scores.items():
+            if domain != primary_domain:
+                normalized_score = score / max(sum(scores.values()), 1)
+                if normalized_score > SECONDARY_THRESHOLD:
+                    routing.append(domain)
+        
+        # Special cases with MUCH stricter criteria
+        signal_density = enhanced_analysis.get('signal_density', 0.0)
+        
+        # High-signal content: Only if EXTREMELY high density
+        if (signal_density > 0.05 and  # 5% signal density (was 2%)
+            enhanced_analysis.get('total_signals', 0) > 10):  # AND 10+ signals
+            routing = ['concept', 'framework', 'metaphor']
+            self.logger.info("Ultra-high signal content → all domains", 
+                            extra={'signal_density': signal_density, 
+                                   'total_signals': enhanced_analysis.get('total_signals', 0)})
+        
+        # Conversations: Only multi-domain if they're actually multi-domain
+        elif enhanced_analysis.get('is_conversation'):
+            # Only route to all if confidence is high for multiple domains
+            multi_domain_count = sum(1 for domain, score in scores.items() 
+                                   if (score / max(sum(scores.values()), 1)) > HIGH_SIGNAL_THRESHOLD)
+            
+            if multi_domain_count < 2:  # If not truly multi-domain, stick to primary + maybe one
+                routing = [primary_domain]
+                best_secondary = max((d for d, s in scores.items() if d != primary_domain), 
+                                   key=lambda d: scores[d], default=None)
+                if best_secondary and (scores[best_secondary] / sum(scores.values())) > SECONDARY_THRESHOLD:
+                    routing.append(best_secondary)
+        
+        # Platform integration: Only add framework if not already primary
+        if (enhanced_analysis.get('has_platform_integration', False) and 
+            'framework' not in routing and
+            enhanced_analysis.get('platform_references', 0) > 3):  # Significant platform content
+            routing.append('framework')
+        
+        # Persona annotations: Be more selective
+        if enhanced_analysis.get('has_persona_annotations', False):
+            persona_count = enhanced_analysis.get('persona_annotation_count', 0)
+            if persona_count > 2:  # Only if multiple persona annotations
+                routing = ['concept', 'framework', 'metaphor']
+        
+        self.logger.info(f"Smart routing decision: {routing}", 
+                        extra={'primary': primary_domain, 'confidence': confidence, 
+                               'secondary_scores': {d: scores.get(d, 0) for d in routing if d != primary_domain}})
+        
+        return routing
     
     def _basic_tripartite_routing(self, content: str, enhanced_analysis: Dict) -> List[str]:
         """Fallback basic tripartite routing when enhanced classification is not available"""
