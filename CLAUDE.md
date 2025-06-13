@@ -24,6 +24,43 @@ python streamlined_float_daemon.py ~/dropzone \
 ```
 
 ### Testing Components
+
+#### Comprehensive Test Suite
+```bash
+# Install test dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests
+python run_tests.py
+
+# Run all tests with coverage report
+python run_tests.py --coverage
+
+# Run specific test categories
+python run_tests.py --unit          # Unit tests only
+python run_tests.py --integration   # Integration tests only  
+python run_tests.py --config        # Configuration tests only
+python run_tests.py --daemon        # Daemon functionality tests
+python run_tests.py --patterns      # Pattern detection tests
+
+# Run tests in parallel (faster)
+python run_tests.py --parallel
+
+# Run specific test file
+python run_tests.py --file tests/test_config.py
+
+# Skip slow tests (fast development cycle)
+python run_tests.py --fast
+
+# Using pytest directly
+pytest tests/ -v                    # All tests with verbose output
+pytest tests/test_config.py -v      # Specific test file
+pytest -m unit                      # Unit tests only
+pytest -m "not slow"                # Skip slow tests
+pytest --cov=. --cov-report=html    # With coverage report
+```
+
+#### Individual Component Testing
 ```bash
 # Test Ollama summarizer standalone
 python ollama_enhanced_float_summarizer.py
@@ -45,6 +82,239 @@ python -c "from config import FloatConfig; c = FloatConfig(); print('Config vali
 
 # Debug configuration issues
 python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Ollama enabled:', c.get('enable_ollama'))"
+```
+
+## Development Environment Setup
+
+### First-Time Setup
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install all dependencies from pinned requirements
+pip install -r requirements.txt
+
+# Install development dependencies (if creating tests)
+pip install pytest pytest-cov black flake8 mypy
+
+# Verify installation
+python -c "from config import FloatConfig; print('✅ FLOAT modules loaded successfully')"
+```
+
+### Testing Framework
+
+FLOAT includes a comprehensive test suite with pytest-based testing infrastructure.
+
+#### Test Structure
+```
+tests/
+├── __init__.py              # Test suite initialization
+├── conftest.py              # Shared fixtures and configuration
+├── test_config.py           # Configuration management tests
+├── test_daemon.py           # Core daemon functionality tests
+├── test_pattern_detector.py # Pattern detection tests
+├── test_integration.py      # Integration tests (future)
+└── data/                    # Test data files
+```
+
+#### Quick Testing Commands
+```bash
+# Install test dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests with custom runner
+./run_tests.py
+
+# Run specific test categories
+./run_tests.py --config      # Configuration tests
+./run_tests.py --daemon      # Daemon functionality  
+./run_tests.py --patterns    # Pattern detection tests
+./run_tests.py --unit        # Unit tests only
+
+# Development testing (fast)
+./run_tests.py --fast        # Skip slow tests
+./run_tests.py --parallel    # Run in parallel
+
+# Coverage reporting
+./run_tests.py --coverage    # Generate HTML coverage report
+```
+
+#### Advanced Testing
+```bash
+# Direct pytest commands
+pytest tests/ -v                           # All tests, verbose
+pytest tests/test_config.py::TestFloatConfig::test_default_config_loading -v
+pytest -m "unit and not slow"              # Fast unit tests only
+pytest --cov=. --cov-report=html           # Coverage report
+pytest -x --pdb                            # Stop on first failure, debug
+
+# Test specific functionality
+pytest tests/test_config.py -k "environment" -v  # Environment variable tests
+pytest tests/test_daemon.py -k "deduplication"   # Deduplication tests
+pytest tests/test_pattern_detector.py -k "float" # FLOAT pattern tests
+
+# Parallel execution for speed
+pytest -n auto                             # Auto-detect CPU cores
+pytest -n 4                                # Use 4 processes
+```
+
+#### Test Categories and Markers
+```bash
+# Test markers for categorization
+pytest -m unit                 # Unit tests for individual components
+pytest -m integration          # Integration tests across components
+pytest -m config              # Configuration-related tests  
+pytest -m daemon              # Daemon functionality tests
+pytest -m patterns            # Pattern detection tests
+pytest -m slow                # Long-running tests
+pytest -m "not slow"          # Skip slow tests for development
+
+# Combined markers
+pytest -m "unit and not slow"  # Fast unit tests only
+pytest -m "config or daemon"   # Configuration or daemon tests
+```
+
+#### Test Fixtures and Utilities
+```python
+# Available fixtures (from conftest.py)
+def test_example(temp_dir, mock_config, sample_text_content):
+    # temp_dir: Temporary directory for test files
+    # mock_config: Complete test configuration
+    # sample_text_content: Sample content with FLOAT patterns
+    pass
+```
+
+#### Writing New Tests
+```python
+# Example test structure
+import pytest
+from your_module import YourClass
+
+class TestYourClass:
+    def setup_method(self):
+        """Set up before each test"""
+        self.instance = YourClass()
+    
+    def test_basic_functionality(self, mock_config):
+        """Test basic functionality"""
+        result = self.instance.process(mock_config)
+        assert result['success'] is True
+    
+    @pytest.mark.slow
+    def test_large_file_processing(self):
+        """Test that takes longer to run"""
+        # Large file processing test
+        pass
+    
+    @pytest.mark.unit
+    def test_unit_functionality(self):
+        """Unit test for specific component"""
+        # Isolated unit test
+        pass
+```
+
+#### Test Data Management
+```bash
+# Test data location
+tests/data/                     # Static test data files
+tests/temp/                     # Temporary test files (auto-created)
+
+# Using test fixtures
+def test_with_sample_content(sample_text_content, sample_daily_log_content):
+    # Access pre-defined test content
+    assert "ctx::" in sample_text_content
+    assert "type: log" in sample_daily_log_content
+```
+
+#### Continuous Integration Testing
+```bash
+# Pre-commit testing (fast)
+./run_tests.py --fast --parallel
+
+# Full test suite (CI)
+./run_tests.py --coverage --parallel
+
+# Quality checks
+black --check .                 # Code formatting
+flake8 .                       # Linting
+mypy --ignore-missing-imports . # Type checking
+```
+
+#### Test Coverage Goals
+- **Configuration**: 95%+ coverage for config loading, validation, environment handling
+- **Daemon Core**: 90%+ coverage for file processing, deduplication, state management  
+- **Pattern Detection**: 85%+ coverage for FLOAT pattern recognition
+- **Integration**: 80%+ coverage for component interaction testing
+
+#### Performance Testing
+```bash
+# Memory profiling during tests
+pytest --profile-svg tests/test_daemon.py
+
+# Time-based performance testing
+pytest --durations=10           # Show 10 slowest tests
+pytest --benchmark-only         # Run benchmark tests only (if implemented)
+```
+
+#### Test Maintenance
+```bash
+# Update test dependencies
+pip install -r requirements-dev.txt --upgrade
+
+# Clean test artifacts
+rm -rf htmlcov/ .coverage .pytest_cache/
+rm -rf tests/temp/* tests/data/temp*
+
+# Generate test report
+pytest --html=test_report.html --self-contained-html
+```
+
+### Git Workflow Best Practices
+```bash
+# Create feature branch for improvements
+git checkout -b feature/improve-pattern-detection
+
+# Keep commits focused and atomic
+git add specific_file.py
+git commit -m "feat: add enhanced pattern detection for persona annotations
+
+- Implement recognition for [qtb::] and [karen::] patterns
+- Add confidence scoring for tripartite classification
+- Reduce false positives in conversation detection"
+
+# Rebase before merging to maintain clean history
+git rebase main
+
+# Use conventional commit messages
+# feat: new feature
+# fix: bug fix  
+# docs: documentation changes
+# test: adding tests
+# refactor: code improvements without functionality changes
+```
+
+### Performance Monitoring
+```bash
+# Monitor real-time performance metrics
+watch -n 5 'tail -1 ~/float-dropzone/.logs/float_metrics.log | jq .'
+
+# Generate performance report for last 24 hours
+python -c "
+from performance_monitor import PerformanceMonitor
+from pathlib import Path
+monitor = PerformanceMonitor(Path('~/float-dropzone'))
+print(monitor.get_performance_summary(hours=24))
+"
+
+# Check ChromaDB collection sizes
+python -c "
+import chromadb
+client = chromadb.PersistentClient(path='~/github/chroma-data')
+for collection in client.list_collections():
+    count = collection.count()
+    print(f'{collection.name}: {count:,} documents')
+"
 ```
 
 ## Architecture Overview
@@ -261,7 +531,6 @@ Current active files in the system:
 
 - ObsidianMD dataview documentation @docs/dataview.md
 - ObsidianMD templater documentation @docs/templater.md
-- Chroma documentation @docs/chroma.md
 - Nushell documentation @docs/nushell.md
 
 ## Troubleshooting
@@ -370,6 +639,156 @@ python -c "from config import FloatConfig; c = FloatConfig(); print(c.validate()
 
 # Debug specific config values
 python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); print('Config:', {k:v for k,v in c.config.items() if 'ollama' in k.lower()})"
+```
+
+### Advanced Debugging
+
+**Enable Debug Logging:**
+```bash
+# Set debug logging level
+export FLOAT_LOG_LEVEL=DEBUG
+
+# Start daemon with verbose output
+python streamlined_float_daemon.py ~/dropzone --log-level DEBUG
+
+# Monitor logs in real-time
+tail -f ~/float-dropzone/.logs/float_daemon.log | jq '.'
+```
+
+**Memory and Performance Profiling:**
+```bash
+# Profile memory usage (install memory_profiler first: pip install memory_profiler)
+python -m memory_profiler streamlined_float_daemon.py
+
+# Profile CPU usage with cProfile
+python -m cProfile -o profile_output.prof streamlined_float_daemon.py
+python -c "import pstats; p = pstats.Stats('profile_output.prof'); p.sort_stats('cumulative').print_stats(20)"
+
+# Monitor system resources
+python -c "
+import psutil
+print(f'Memory usage: {psutil.virtual_memory().percent}%')
+print(f'CPU usage: {psutil.cpu_percent()}%')
+print(f'Disk usage: {psutil.disk_usage(\"/\").percent}%')
+"
+```
+
+**ChromaDB Analysis and Debugging:**
+```bash
+# Analyze ChromaDB performance and storage
+python -c "
+import chromadb
+from pathlib import Path
+client = chromadb.PersistentClient(path='~/github/chroma-data')
+
+print('📊 ChromaDB Analysis:')
+collections = client.list_collections()
+total_docs = 0
+
+for collection in collections:
+    count = collection.count()
+    total_docs += count
+    print(f'  {collection.name}: {count:,} documents')
+
+print(f'\\n📈 Total documents: {total_docs:,}')
+
+# Check disk usage
+chroma_path = Path('~/github/chroma-data').expanduser()
+if chroma_path.exists():
+    size_mb = sum(f.stat().st_size for f in chroma_path.rglob('*') if f.is_file()) / 1024 / 1024
+    print(f'💾 ChromaDB disk usage: {size_mb:.1f} MB')
+"
+
+# Test ChromaDB query performance
+python -c "
+import time
+import chromadb
+client = chromadb.PersistentClient(path='~/github/chroma-data')
+
+try:
+    collection = client.get_collection('float_tripartite_v2_concept')
+    start = time.time()
+    results = collection.query(query_texts=['test query'], n_results=5)
+    elapsed = time.time() - start
+    print(f'✅ Query performance: {elapsed:.3f}s for {len(results[\"documents\"][0]) if results[\"documents\"] else 0} results')
+except Exception as e:
+    print(f'❌ ChromaDB query failed: {e}')
+"
+```
+
+**Dependency and Environment Validation:**
+```bash
+# Validate all dependencies are correctly installed
+python -c "
+import sys
+print(f'Python version: {sys.version}')
+
+required_modules = [
+    'watchdog', 'chromadb', 'pathlib', 'python_magic', 'PyPDF2', 
+    'mammoth', 'requests', 'ollama', 'frontmatter'
+]
+
+missing = []
+for module in required_modules:
+    try:
+        __import__(module)
+        print(f'✅ {module}')
+    except ImportError:
+        missing.append(module)
+        print(f'❌ {module} - MISSING')
+
+if missing:
+    print(f'\\n🚨 Install missing: pip install {\" \".join(missing)}')
+else:
+    print('\\n🎉 All dependencies satisfied!')
+"
+
+# Check file permissions for common paths
+python -c "
+import os
+from pathlib import Path
+
+paths_to_check = [
+    '~/vault', '~/github/chroma-data', '~/float-dropzone',
+    '~/float-dropzone/.logs', '~/vault/FLOAT.conversations'
+]
+
+for path_str in paths_to_check:
+    path = Path(path_str).expanduser()
+    if path.exists():
+        readable = os.access(path, os.R_OK)
+        writable = os.access(path, os.W_OK)
+        print(f'📁 {path}: R:{\"✅\" if readable else \"❌\"} W:{\"✅\" if writable else \"❌\"}')
+    else:
+        print(f'📁 {path}: ❌ Does not exist')
+"
+```
+
+**Configuration Deep Dive:**
+```bash
+# Comprehensive configuration analysis
+python -c "
+from config import FloatConfig
+import json
+
+config = FloatConfig('float-config.json')
+print('📋 Current Configuration:')
+print(json.dumps(config.config, indent=2, default=str))
+
+print('\\n🔍 Validation Results:')
+validations = config.validate()
+for key, valid in validations.items():
+    status = '✅' if valid else '❌'
+    print(f'  {status} {key}: {valid}')
+
+print('\\n🌍 Environment Overrides:')
+env_vars = ['FLOAT_VAULT_PATH', 'FLOAT_CHROMA_PATH', 'FLOAT_DROPZONE_PATH', 
+           'FLOAT_LOG_DIR', 'FLOAT_ENABLE_OLLAMA', 'OLLAMA_URL']
+for var in env_vars:
+    value = os.getenv(var)
+    if value:
+        print(f'  {var}={value}')
+"
 ```
 
 ## Memories
