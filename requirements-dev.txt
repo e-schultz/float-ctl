@@ -1,0 +1,35 @@
+# Development dependencies for FLOAT testing and development
+# Install with: pip install -r requirements-dev.txt
+
+# Testing framework
+pytest>=8.0.0
+pytest-timeout>=2.3.1
+pytest-mock>=3.12.0
+pytest-cov>=4.0.0
+pytest-xdist>=3.5.0  # For parallel test execution
+
+# Code quality and formatting
+black>=25.1.0
+flake8>=7.0.0
+mypy>=1.8.0
+isort>=5.13.0
+
+# Development tools
+pre-commit>=3.6.0
+tox>=4.12.0
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+
+# Profiling and debugging
+memory-profiler>=0.61.0
+py-spy>=0.3.14
+
+# Type checking stubs
+types-requests>=2.31.0
+types-PyYAML>=6.0.12
+
+# Optional: Enhanced testing capabilities
+hypothesis>=6.96.0  # Property-based testing
+factory-boy>=3.3.0  # Test data generation

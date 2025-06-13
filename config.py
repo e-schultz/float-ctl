@@ -43,7 +43,7 @@ class FloatConfig:
             env_overrides['enable_ollama'] = float_enable_ollama.lower() == 'true'
         
         for key, value in env_overrides.items():
-            if value is not None:
+            if value is not None and value != '':
                 config[key] = value
         
         # Ensure paths are expanded

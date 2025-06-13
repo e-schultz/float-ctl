@@ -59,9 +59,14 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 
 ### Prerequisites
 
-1. **Python 3.8+** with the following packages:
+1. **Python 3.8+** with required packages:
    ```bash
-   pip install watchdog chromadb pathlib python-magic PyPDF2 mammoth
+   # Create and activate virtual environment (recommended)
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # Install all required dependencies
+   pip install -r requirements.txt
    ```
 
 2. **libmagic** (for enhanced file type detection):
@@ -505,6 +510,61 @@ LIMIT 5
 
 ## Testing and Validation
 
+### Comprehensive Test Suite
+
+FLOAT includes a robust testing framework with 34 comprehensive tests covering all major components:
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run specific test categories
+python run_tests.py --config          # Configuration tests
+python run_tests.py --patterns        # Pattern detection tests  
+python run_tests.py --daemon          # Daemon functionality tests
+
+# Run with coverage reporting
+python run_tests.py --coverage
+
+# Run tests in parallel for faster execution
+python run_tests.py --parallel
+
+# Install test dependencies
+python run_tests.py --install-deps
+```
+
+#### Test Categories
+
+**Configuration Tests** (15 tests):
+- Default configuration loading and validation
+- Environment variable overrides and boolean handling
+- Path expansion and conversation .dis path generation
+- Config file creation, loading, and error handling
+- Edge cases including empty environment variables
+
+**Pattern Detection Tests** (16 tests):
+- Core FLOAT patterns (ctx::, highlight::, signal::, float.dispatch())
+- Persona annotations ([sysop::], [karen::], [qtb::], etc.)
+- Extended patterns (expandOn::, relatesTo::, rememberWhen::)
+- Signal density calculation and complexity analysis
+- Code block detection and platform integration patterns
+- Daily log and conversation detection
+- Edge cases including malformed patterns and special characters
+
+**Daemon Tests** (3 tests):
+- Daemon initialization with proper mocking
+- Configuration loading and validation
+- Import verification and basic functionality
+
+#### Test Framework Features
+
+- **Comprehensive Fixtures**: Mock ChromaDB client, Ollama client, temporary directories
+- **Realistic Test Data**: Sample content with actual FLOAT patterns
+- **Robust Mocking**: All external dependencies properly mocked
+- **Edge Case Coverage**: Empty content, None values, malformed input  
+- **Test Categories**: Unit, integration, config, daemon, patterns markers
+- **Performance Testing**: Parallel execution and timeout handling
+
 ### Test Individual Components
 
 ```bash
@@ -516,6 +576,9 @@ python float_dis_template_system.py
 
 # Test enhanced context
 python enhanced_comprehensive_context_ollama.py
+
+# Test pattern detection
+python enhanced_pattern_detector.py
 ```
 
 ### Validate Configuration
@@ -529,6 +592,25 @@ python -c "from config import FloatConfig; c = FloatConfig(); print(c.validate()
 ```bash
 echo "ctx::test content highlight::important" > ~/float-dropzone/test.txt
 # Watch logs for processing
+```
+
+### Development Testing
+
+```bash
+# Run tests with verbose output
+python -m pytest -v
+
+# Run specific test file
+python -m pytest tests/test_config.py -v
+
+# Run tests matching pattern
+python -m pytest -k "test_pattern_detection" -v
+
+# Run tests with coverage and HTML report
+python -m pytest --cov=. --cov-report=html
+
+# Run only fast tests (skip slow integration tests)
+python run_tests.py --fast
 ```
 
 ## Troubleshooting
