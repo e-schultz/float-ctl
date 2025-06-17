@@ -887,10 +887,10 @@ Configure webhooks for external notifications:
 ## Support and Development
 
 ### Version Information
-- **Current Version**: 2.5.0
+- **Current Version**: 2.5.1
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
-- **Major Features**: floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
+- **Major Features**: floatctl CLI (fully operational), content deduplication, smart routing, enhanced AI integration, comprehensive testing
 
 ### Contributing
 
