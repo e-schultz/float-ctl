@@ -548,7 +548,8 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
             if (mime_type.startswith('text/') or 
                 extension in ['.txt', '.md', '.json', '.csv', '.log', '.html']):
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    return f.read()
+                    content = f.read()
+                    return self._sanitize_content(content)
             
             # JSON files (common for exports)
             elif extension == '.json':
@@ -618,6 +619,33 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
                 
         except Exception as e:
             return f"[LARGE FILE ERROR - {file_metadata['filename']}]\nError extracting preview: {e}"
+    
+    def _sanitize_content(self, content: str) -> str:
+        """Sanitize content by removing problematic inline data like base64 images."""
+        import re
+        
+        if not content:
+            return content
+        
+        # Remove base64 encoded images (data:image format)
+        # These can be massive and cause memory issues
+        base64_pattern = r'data:image/[^;]+;base64,[A-Za-z0-9+/=]+'
+        content = re.sub(base64_pattern, '[BASE64_IMAGE_REMOVED]', content)
+        
+        # Remove other large base64 data URIs
+        large_data_pattern = r'data:[^;]+;base64,[A-Za-z0-9+/=]{1000,}'
+        content = re.sub(large_data_pattern, '[LARGE_BASE64_DATA_REMOVED]', content)
+        
+        # Remove extremely long lines that might cause issues (over 10k chars)
+        lines = content.split('\n')
+        sanitized_lines = []
+        for line in lines:
+            if len(line) > 10000:
+                sanitized_lines.append(line[:1000] + '... [LINE_TRUNCATED_' + str(len(line)) + '_CHARS]')
+            else:
+                sanitized_lines.append(line)
+        
+        return '\n'.join(sanitized_lines)
     
     def _extract_pdf_content(self, file_path: Path) -> str:
         """Extract text from PDF files."""
@@ -944,6 +972,15 @@ if __name__ == "__main__":
                        help='Process existing files before starting daemon')
     parser.add_argument('--create-config', help='Create configuration template at specified path')
     
+    # Git integration batch processing arguments
+    parser.add_argument('--batch', action='store_true',
+                       help='Process files in batch mode (triggered by git hooks)')
+    parser.add_argument('--type', help='Processing type hint (research, conversations, documentation, mixed)')
+    parser.add_argument('--bundle', help='Bundle strategy (merge, individual, hybrid)')
+    parser.add_argument('--domain', help='Domain hint (AI/ML, technical, philosophy, etc.)')
+    parser.add_argument('--files', help='Comma-separated list of files to process')
+    parser.add_argument('--commit-msg', help='Full commit message for context')
+    
     args = parser.parse_args()
     
     # Handle config template creation
@@ -967,7 +1004,41 @@ if __name__ == "__main__":
     if args.max_file_size:
         config_overrides['max_file_size_mb'] = args.max_file_size
     
-    # Initialize daemon
+    # Handle batch processing mode (git integration)
+    if args.batch:
+        print(f"🎯 Git-triggered batch processing mode")
+        print(f"📝 Type: {args.type}, Bundle: {args.bundle}, Domain: {args.domain}")
+        print(f"📁 Files: {args.files}")
+        print(f"💬 Commit: {args.commit_msg}")
+        
+        # Initialize handler for batch processing
+        handler = StreamlinedFloatDaemon(
+            dropzone_path=args.dropzone_path,
+            config_path=args.config,
+            **config_overrides
+        )
+        
+        # Process batch files
+        if args.files:
+            file_list = args.files.split(',')
+            dropzone_path = Path(args.dropzone_path or handler.config.get('dropzone_path'))
+            
+            for file_rel_path in file_list:
+                file_path = dropzone_path / file_rel_path.strip()
+                if file_path.exists():
+                    print(f"📄 Processing: {file_path.name}")
+                    try:
+                        result = handler.process_dropzone_file(file_path)
+                        print(f"✅ Processed {file_path.name}: {result.get('float_id', 'unknown')}")
+                    except Exception as e:
+                        print(f"❌ Failed to process {file_path.name}: {e}")
+                else:
+                    print(f"⚠️ File not found: {file_path}")
+        
+        print("🎯 Batch processing complete")
+        exit(0)
+    
+    # Initialize daemon for normal monitoring mode
     daemon = FloatDaemonManager(
         dropzone_path=args.dropzone_path,
         config_path=args.config,

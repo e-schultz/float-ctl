@@ -7,6 +7,7 @@ A comprehensive file processing and knowledge management system that automates t
 FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management system that:
 
 - **Monitors** a dropzone folder for new files with real-time processing
+- **Git-Integrates** batch processing triggered by semantic commit messages
 - **Deduplicates** content using advanced content-based hashing to prevent storage waste
 - **Processes** various file types (text, markdown, JSON, PDF, Word docs) with content-aware analysis
 - **Analyzes** content using local AI-powered summarization (Ollama) with specialized prompts
@@ -16,20 +17,41 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 - **Maintains** daily context summaries and conversation analysis with temporal indexing
 - **Provides** comprehensive monitoring, logging, error recovery, and health checks
 - **Includes** floatctl CLI for direct file processing and search with FloatQL syntax
+- **Enables** semantic batch processing through familiar git workflows
 
 ## Architecture
 
+### Git-Integrated Processing Flow
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Dropzone      │───▶│   FLOAT Daemon   │───▶│  Obsidian Vault │
-│   (Monitor)     │    │   (Process)      │    │  (.dis files)   │
+│  Git Commit     │───▶│   Post-Commit    │───▶│   FLOAT Daemon  │
+│  (Semantic)     │    │   Hook Parser    │    │   (Batch Mode)  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
+                                                         │
+┌─────────────────┐    ┌──────────────────┐             ▼
+│   Dropzone      │───▶│   FLOAT Daemon   │    ┌─────────────────┐
+│   (Monitor)     │    │   (Live Mode)    │───▶│  Obsidian Vault │
+└─────────────────┘    └──────────────────┘    │  (.dis files)   │
+                                │               └─────────────────┘
                                 ▼
                        ┌──────────────────┐
                        │    ChromaDB      │
                        │  (Vector Store)  │
                        └──────────────────┘
+```
+
+### Workspace Structure
+```
+/workspace/
+├── tools/float-log/          # FLOAT development repo
+│   ├── streamlined_float_daemon.py
+│   ├── enhanced_integration.py
+│   └── floatctl/
+├── operations/               # Git-enabled processing repo
+│   ├── .git/hooks/post-commit
+│   ├── float-dropzone/       # Batch staging area
+│   └── vault → ~/Documents/FLOAT.SHACK
+└── shared/                   # Convenience symlinks
 ```
 
 ### Key Components
@@ -853,6 +875,92 @@ Automatically generates:
 - **Cached summaries** to avoid reprocessing
 - **Health monitoring** with automatic recovery
 
+## Git Integration
+
+### Git-Triggered Batch Processing
+
+FLOAT v3.0 introduces seamless git integration that turns familiar git workflows into intelligent batch processing commands. Stage files, commit with semantic hints, and let FLOAT process your content automatically.
+
+#### Commit Message Format
+
+Use semantic processing hints in your commit messages:
+
+```bash
+git commit -m "type:research bundle:merge domain:AI/ML processing hint description"
+```
+
+**Processing Types:**
+- `research` - Academic papers, studies, technical documentation
+- `conversations` - Chat logs, meeting transcripts, dialogue
+- `documentation` - Reference materials, guides, specifications
+- `mixed` - Multiple content types requiring intelligent classification
+
+**Bundle Strategies:**
+- `merge` - Process interconnected content as unified concepts
+- `individual` - Process each file separately with distinct analysis
+- `hybrid` - Intelligent mix of merge and individual based on content
+
+**Domain Hints:**
+- `AI/ML` - Artificial intelligence and machine learning content
+- `technical` - Programming, engineering, system documentation
+- `philosophy` - Conceptual, theoretical, abstract discussions
+- Custom domains based on your content areas
+
+#### Workflow Example
+
+1. **Stage files** in organized subdirectories:
+```bash
+cd operations/
+mkdir float-dropzone/research-batch/
+cp ~/Downloads/*.pdf float-dropzone/research-batch/
+git add float-dropzone/research-batch/
+```
+
+2. **Commit with processing hints**:
+```bash
+git commit -m "type:research bundle:merge domain:AI/ML Q3 consciousness research papers"
+```
+
+3. **FLOAT processes automatically**:
+- Post-commit hook triggers batch processing
+- Files analyzed with domain-specific intelligence  
+- Results stored in ChromaDB with enhanced metadata
+- Rich .dis files generated in Obsidian vault
+
+#### Post-Commit Hook Architecture
+
+The git integration uses a sophisticated post-commit hook that:
+
+- **Parses commit messages** for type, bundle, and domain hints
+- **Identifies batch files** in `float-dropzone/` subdirectories
+- **Triggers FLOAT daemon** in batch processing mode
+- **Handles complex filenames** including spaces and special characters
+- **Provides comprehensive logging** for debugging and monitoring
+
+#### Setup Instructions
+
+Git integration is automatically configured during workspace setup. The post-commit hook is located at:
+
+```
+operations/.git/hooks/post-commit
+```
+
+**Manual Setup** (if needed):
+```bash
+cd operations/.git/hooks/
+chmod +x post-commit
+./post-commit  # Test the hook
+```
+
+#### Batch Processing Benefits
+
+- **Familiar Interface**: Use git commands you already know
+- **Semantic Intelligence**: Processing hints guide AI analysis
+- **Automatic Processing**: No manual daemon management required
+- **Rich Metadata**: Enhanced ChromaDB storage with domain context
+- **Cross-Reference Generation**: Automatic vault linking and temporal indexing
+- **Error Recovery**: Robust handling of complex file structures
+
 ## API and Extensibility
 
 ### Custom Processors
@@ -887,10 +995,10 @@ Configure webhooks for external notifications:
 ## Support and Development
 
 ### Version Information
-- **Current Version**: 2.5.1
+- **Current Version**: 3.0.0
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
-- **Major Features**: floatctl CLI (fully operational), content deduplication, smart routing, enhanced AI integration, comprehensive testing
+- **Major Features**: Git-integrated batch processing, semantic commit message parsing, floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
 
 ### Contributing
 

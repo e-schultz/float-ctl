@@ -1,5 +1,149 @@
 # FLOAT Ecosystem Changelog
 
+## Version 3.0.0 - Git-Integrated Batch Processing 🚀
+**Release Date:** 2025-06-17
+
+### 🎯 Major New Features
+
+#### Git-Triggered Batch Processing
+- **NEW**: Post-commit hooks trigger intelligent FLOAT processing
+- **NEW**: Semantic processing hints via commit messages (`type:X bundle:Y domain:Z`)
+- **NEW**: Batch processing mode with `--batch` CLI flag
+- **NEW**: Git commits automatically process staged files with AI-powered analysis
+
+#### Advanced Content Processing
+- **NEW**: Base64 image sanitization prevents memory issues
+- **NEW**: Filename space handling for complex file structures
+- **NEW**: Mixed content type processing (PDFs, DOCX, markdown, transcripts)
+- **NEW**: Bundle strategies: merge, individual, hybrid
+
+#### Workspace Architecture
+- **NEW**: Unified workspace structure for tools + operations
+- **NEW**: Symlinked convenience access (`shared/` directory)
+- **NEW**: Separate git repos for development vs. operational usage
+- **NEW**: Cross-repo navigation with relative paths
+
+### 🛠️ Git Integration Workflow
+
+#### Commit Message Format
+```bash
+git commit -m "type:research bundle:merge domain:AI/ML description"
+```
+
+**Supported Types**: research, conversations, documentation, mixed
+**Bundle Strategies**: merge (interconnected), individual (separate), hybrid
+**Domain Hints**: AI/ML, technical, philosophy, etc.
+
+#### Processing Pipeline
+1. **Stage files** in `float-dropzone/subdirectories/`
+2. **Git commit** triggers post-commit hook
+3. **Hook parses** semantic processing hints
+4. **Daemon processes** files with domain-specific intelligence
+5. **Results stored** in ChromaDB with enhanced metadata
+
+### 🏗️ Technical Architecture
+
+#### Workspace Structure
+```
+/workspace/
+├── tools/float-log/          # FLOAT development repo
+├── operations/               # Git-enabled processing repo
+│   ├── .git/hooks/          # Post-commit batch processing
+│   ├── float-dropzone/      # Staging area for batch files
+│   └── vault → ~/Documents/FLOAT.SHACK
+└── shared/                  # Convenience symlinks
+```
+
+#### Batch Processing Implementation
+- **Post-commit hook**: Parses commit messages, triggers processing
+- **Python environment**: Fixed path handling for git contexts
+- **Content sanitization**: Removes problematic base64 data
+- **Error recovery**: Robust filename and path handling
+
+### 🚀 Performance & Reliability
+
+#### Content Processing Improvements
+- **Memory safety**: Large file preview extraction
+- **Sanitization**: Base64 image/data removal
+- **Chunking**: Intelligent content splitting for large files
+- **Error handling**: Graceful failures with detailed logging
+
+#### Git Integration Reliability
+- **Path resolution**: Absolute paths for cross-repo access
+- **Environment isolation**: Separate Python contexts for hooks vs. daemon
+- **File tracking**: Robust git state management
+- **Logging**: Comprehensive hook execution logs
+
+### 📊 Processing Capabilities
+
+#### Supported Content Types
+- **PDFs**: Daily logs, research papers, documentation
+- **Markdown**: Conversations, notes, documentation  
+- **DOCX**: Research plans, structured documents
+- **Transcripts**: Otter.ai, meeting recordings
+- **Mixed batches**: Interconnected content processing
+
+#### Semantic Enhancement
+- **Domain-specific hints**: AI/ML, technical, philosophical content
+- **Bundle intelligence**: Merge related concepts vs. individual analysis
+- **Cross-referencing**: Automatic vault linking and temporal context
+- **Pattern detection**: 40+ FLOAT methodology markers
+
+### 🎯 User Experience
+
+#### Workflow Integration
+- **Familiar git commands**: No new tools to learn
+- **Semantic hints**: Natural language processing instructions
+- **Automatic processing**: Files process without manual intervention
+- **Rich metadata**: Enhanced .dis files with comprehensive analysis
+
+#### Developer Experience  
+- **Separated concerns**: Tools development vs. operational usage
+- **Claude Code friendly**: Unified navigation across repos
+- **Symlinked access**: Convenient paths for development
+- **Configuration management**: Centralized config with path flexibility
+
+### 🐛 Bug Fixes & Improvements
+
+#### Filename Handling
+- **FIXED**: Spaces in filenames causing path parsing errors
+- **IMPROVED**: Comma-separated file list processing
+- **ENHANCED**: Robust shell escaping and quoting
+
+#### Content Processing
+- **FIXED**: Base64 images causing memory exhaustion
+- **ADDED**: Content sanitization with size limits
+- **IMPROVED**: Large file preview extraction
+
+#### Git Integration
+- **FIXED**: Python environment path resolution in hooks
+- **IMPROVED**: Error handling and logging
+- **ENHANCED**: File change detection and processing
+
+### 📚 Documentation
+
+#### New Documentation
+- **CLAUDE.md**: Comprehensive workspace navigation guide
+- **Setup scripts**: Automated symlink and configuration setup
+- **Testing utilities**: Batch processing validation scripts
+- **Integration examples**: Real-world usage patterns
+
+### 🔄 Migration Notes
+
+#### Workspace Reorganization
+- **Moved**: `float-log` → `workspace/tools/float-log/`
+- **Created**: `workspace/operations/` for git-tracked processing
+- **Added**: Symlinks for convenient cross-repo access
+- **Updated**: Configuration paths for new structure
+
+#### Backward Compatibility
+- **Maintained**: All existing daemon functionality
+- **Preserved**: ChromaDB collections and data
+- **Retained**: floatctl CLI commands and features
+- **Extended**: Processing capabilities without breaking changes
+
+---
+
 ## Version 2.5.1 - floatctl CLI Integration Fix ✅
 **Release Date:** 2025-06-16
 
