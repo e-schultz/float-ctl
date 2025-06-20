@@ -54,6 +54,7 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         self.processing_queue = set()
         self.auto_update_daily_context = self.config.get('auto_update_daily_context', True)
         self.max_file_size_mb = self.config.get('max_file_size_mb', 50)
+        self.force_reprocessing = False  # Can be set to True to bypass deduplication
         
         # Add processing state tracking
         self.processing_state_file = self.dropzone_path / '.processing_state.json'
@@ -220,9 +221,14 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         finally:
             self.processing_queue.discard(str(file_path))
     
-    def process_dropzone_file(self, file_path: Path):
+    def process_dropzone_file(self, file_path: Path, processing_hints: str = None, batch_context: Dict = None):
         """
         Process a single dropzone file using the comprehensive system.
+        
+        Args:
+            file_path: Path to the file to process
+            processing_hints: Optional hints to guide processing (e.g., from git commit message)
+            batch_context: Optional context about the batch being processed
         """
         import time
         from logging_config import (log_file_processing_start, log_file_processing_complete, 
@@ -230,16 +236,17 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         
         start_time = time.time()
         
-        # Step 0: Check if file was already processed
-        existing_float_id = self._is_file_processed(file_path)
-        if existing_float_id:
-            self.logger.info(f"File already processed, skipping", 
-                           extra={'file_name': file_path.name, 'float_id': existing_float_id, 'event': 'duplicate_skipped'})
-            return {
-                'float_id': existing_float_id,
-                'duplicate_skipped': True,
-                'processed_at': datetime.now().isoformat()
-            }
+        # Step 0: Check if file was already processed (unless force flag is set)
+        if not self.force_reprocessing:
+            existing_float_id = self._is_file_processed(file_path)
+            if existing_float_id:
+                self.logger.info(f"File already processed, skipping", 
+                               extra={'file_name': file_path.name, 'float_id': existing_float_id, 'event': 'duplicate_skipped'})
+                return {
+                    'float_id': existing_float_id,
+                    'duplicate_skipped': True,
+                    'processed_at': datetime.now().isoformat()
+                }
         
         # Step 1: Extract content first for content-based float ID
         file_metadata = self._extract_file_metadata(file_path)
@@ -248,21 +255,22 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         # Step 2: Generate content-based float ID
         float_id = self._generate_float_id(file_path, content)
         
-        # Step 3: Check for content duplicates before processing
-        all_collections = [
-            'float_dropzone_comprehensive',
-            'float_tripartite_v2_concept',
-            'float_tripartite_v2_framework', 
-            'float_tripartite_v2_metaphor'
-        ]
-        
-        if self._check_content_exists(float_id, all_collections):
-            self._mark_file_processed(file_path, float_id)
-            return {
-                'float_id': float_id,
-                'duplicate_skipped': True,
-                'processed_at': datetime.now().isoformat()
-            }
+        # Step 3: Check for content duplicates before processing (unless force flag is set)
+        if not self.force_reprocessing:
+            all_collections = [
+                'float_dropzone_comprehensive',
+                'float_tripartite_v2_concept',
+                'float_tripartite_v2_framework', 
+                'float_tripartite_v2_metaphor'
+            ]
+            
+            if self._check_content_exists(float_id, all_collections):
+                self._mark_file_processed(file_path, float_id)
+                return {
+                    'float_id': float_id,
+                    'duplicate_skipped': True,
+                    'processed_at': datetime.now().isoformat()
+                }
         
         # Step 4: Use comprehensive context aggregator for file analysis
         file_analysis = self._analyze_file_with_comprehensive_system(file_path, float_id, content, file_metadata)
@@ -287,7 +295,9 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
                 enhanced_summary = self._generate_ollama_summary(
                     file_analysis['content'], 
                     file_analysis['metadata'], 
-                    file_analysis['analysis']
+                    file_analysis['analysis'],
+                    processing_hints=processing_hints,
+                    batch_context=batch_context
                 )
                 file_analysis['ollama_summary'] = enhanced_summary
                 tracker.end_ollama_timer()
@@ -355,7 +365,11 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
                 'float_id': float_id,
                 'dis_file': dis_file_path,
                 'storage_result': storage_result,
-                'file_analysis': file_analysis
+                'file_analysis': file_analysis,
+                'summary': file_analysis.get('ollama_summary', {}).get('summary', 
+                          file_analysis['analysis'].get('basic_summary', 'No summary available')),
+                'filename': file_path.name,
+                'processing_hints': processing_hints
             }
     
     def shutdown(self):
@@ -728,14 +742,17 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         
         return analysis
     
-    def _generate_ollama_summary(self, content: str, file_metadata: Dict, content_analysis: Dict) -> Dict:
+    def _generate_ollama_summary(self, content: str, file_metadata: Dict, content_analysis: Dict, 
+                                processing_hints: str = None, batch_context: Dict = None) -> Dict:
         """Generate enhanced summary using Ollama."""
         if not self.components.get('summarizer'):
             return {'error': 'Ollama not available'}
         
         try:
             return self.components['summarizer'].generate_comprehensive_summary(
-                content, file_metadata, content_analysis
+                content, file_metadata, content_analysis, 
+                processing_hints=processing_hints,
+                batch_context=batch_context
             )
         except Exception as e:
             print(f"⚠️ Ollama summary failed: {e}")
@@ -860,13 +877,49 @@ class StreamlinedFloatDaemon(FileSystemEventHandler):
         else:
             file_analysis['analysis']['summary'] = file_analysis['analysis'].get('basic_summary', 'No summary available')
         
-        return self.components['dis_generator'].create_float_dis_file(
-            file_path,
-            file_analysis['metadata'],
-            chroma_metadata,
-            file_analysis['analysis'],
-            file_analysis['float_id']
-        )
+        # Issue #4: Use streamlined .dis template (80% size reduction)
+        try:
+            from streamlined_dis_template import StreamlinedFloatDisGenerator
+            streamlined_generator = StreamlinedFloatDisGenerator()
+            
+            # Get enhanced patterns if available
+            enhanced_patterns = None
+            if self.enhanced_integration and hasattr(self.enhanced_integration, 'pattern_detector'):
+                if self.enhanced_integration.pattern_detector:
+                    enhanced_patterns = self.enhanced_integration.pattern_detector.extract_comprehensive_patterns(
+                        file_analysis.get('content', '')
+                    )
+            
+            # Generate streamlined .dis content
+            dis_content = streamlined_generator.generate_float_dis(
+                file_analysis['metadata'],
+                chroma_metadata,
+                file_analysis['analysis'],
+                file_analysis['float_id'],
+                enhanced_patterns
+            )
+            
+            # Write streamlined .dis file
+            base_name = file_path.stem
+            dis_filename = f"{base_name}.float_dis.md"
+            dis_path = file_path.parent / dis_filename
+            
+            with open(dis_path, 'w', encoding='utf-8') as f:
+                f.write(dis_content)
+            
+            self.logger.info(f"Generated streamlined .dis file: {dis_filename} (80% smaller)")
+            return dis_path
+            
+        except ImportError:
+            # Fallback to verbose template
+            self.logger.warning("Streamlined template unavailable, using verbose fallback")
+            return self.components['dis_generator'].create_float_dis_file(
+                file_path,
+                file_analysis['metadata'],
+                chroma_metadata,
+                file_analysis['analysis'],
+                file_analysis['float_id']
+            )
     
     def _update_daily_context_for_today(self):
         """Update the comprehensive daily context for today."""
@@ -980,6 +1033,8 @@ if __name__ == "__main__":
     parser.add_argument('--domain', help='Domain hint (AI/ML, technical, philosophy, etc.)')
     parser.add_argument('--files', help='Comma-separated list of files to process')
     parser.add_argument('--commit-msg', help='Full commit message for context')
+    parser.add_argument('--force', action='store_true',
+                       help='Force reprocessing of files even if already processed')
     
     args = parser.parse_args()
     
@@ -1018,22 +1073,67 @@ if __name__ == "__main__":
             **config_overrides
         )
         
-        # Process batch files
+        # Set force flag if provided
+        if args.force:
+            handler.force_reprocessing = True
+        
+        # Process batch files and collect summaries
+        batch_results = []
         if args.files:
             file_list = args.files.split(',')
             dropzone_path = Path(args.dropzone_path or handler.config.get('dropzone_path'))
             
-            for file_rel_path in file_list:
+            # Build batch context
+            batch_context = {
+                'type': args.type,
+                'bundle': args.bundle,
+                'domain': args.domain,
+                'total_files': len(file_list),
+                'commit_msg': args.commit_msg
+            }
+            
+            for i, file_rel_path in enumerate(file_list):
                 file_path = dropzone_path / file_rel_path.strip()
                 if file_path.exists():
                     print(f"📄 Processing: {file_path.name}")
                     try:
-                        result = handler.process_dropzone_file(file_path)
+                        batch_context['current_file_index'] = i
+                        result = handler.process_dropzone_file(
+                            file_path, 
+                            processing_hints=args.commit_msg,
+                            batch_context=batch_context
+                        )
+                        batch_results.append(result)
                         print(f"✅ Processed {file_path.name}: {result.get('float_id', 'unknown')}")
                     except Exception as e:
                         print(f"❌ Failed to process {file_path.name}: {e}")
+                        batch_results.append({'error': str(e), 'file': file_path.name})
                 else:
                     print(f"⚠️ File not found: {file_path}")
+        
+        # Generate bundle meta-summary if we have results
+        if batch_results and any(not r.get('error') for r in batch_results):
+            print("\n📚 Generating bundle meta-summary...")
+            try:
+                from bundle_meta_summarizer import BundleMetaSummarizer
+                meta_summarizer = BundleMetaSummarizer(handler.components.get('summarizer'))
+                
+                bundle_summary = meta_summarizer.generate_bundle_summary(
+                    batch_results=batch_results,
+                    batch_context=batch_context,
+                    processing_hints=args.commit_msg
+                )
+                
+                # Store bundle summary
+                bundle_file = dropzone_path / f"bundle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.bundle_meta.md"
+                with open(bundle_file, 'w', encoding='utf-8') as f:
+                    f.write(bundle_summary)
+                
+                print(f"📝 Bundle meta-summary saved: {bundle_file.name}")
+            except ImportError:
+                print("⚠️ BundleMetaSummarizer not available, skipping meta-summary")
+            except Exception as e:
+                print(f"❌ Failed to generate bundle meta-summary: {e}")
         
         print("🎯 Batch processing complete")
         exit(0)

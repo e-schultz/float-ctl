@@ -125,6 +125,15 @@ class EnhancedSystemIntegration:
         except Exception as e:
             self.logger.warning(f"Enhanced conversation dis system not available: {e}")
             self.conversation_dis_enhanced = None
+        
+        # Initialize streamlined dis generator (Issue #4)
+        try:
+            from streamlined_dis_template import StreamlinedFloatDisGenerator
+            self.streamlined_dis_generator = StreamlinedFloatDisGenerator()
+            self.logger.info("Streamlined .dis generator initialized (Issue #4: 80% size reduction)")
+        except Exception as e:
+            self.logger.warning(f"Streamlined .dis generator not available: {e}")
+            self.streamlined_dis_generator = None
     
     def _initialize_conversation_patterns(self):
         """Initialize patterns for detecting conversation content"""

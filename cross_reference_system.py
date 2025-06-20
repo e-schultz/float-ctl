@@ -471,20 +471,28 @@ class CrossReferenceSystem:
     def _update_vault_references(self, file_analysis: Dict, cross_refs: Dict):
         """Update vault files with references to new content"""
         try:
-            float_id = file_analysis.get('float_id')
-            metadata = file_analysis.get('metadata', {})
+            # Issue #4: Skip redundant FLOAT.references generation 
+            # These are redundant with .float_dis.md files
+            generate_reference_files = self.config.get('generate_reference_files', False)
             
-            # Create a reference note for this file
-            ref_note_path = self.reference_dir / f"{float_id}_references.md"
-            ref_content = self._generate_reference_note(file_analysis, cross_refs)
+            if generate_reference_files:
+                float_id = file_analysis.get('float_id')
+                metadata = file_analysis.get('metadata', {})
+                
+                # Create a reference note for this file
+                ref_note_path = self.reference_dir / f"{float_id}_references.md"
+                ref_content = self._generate_reference_note(file_analysis, cross_refs)
+                
+                with open(ref_note_path, 'w', encoding='utf-8') as f:
+                    f.write(ref_content)
+                
+                if self.logger:
+                    self.logger.info(f"Created reference note: {ref_note_path.name}")
+            else:
+                if self.logger:
+                    self.logger.debug("Skipping FLOAT.references generation (disabled via Issue #4)")
             
-            with open(ref_note_path, 'w', encoding='utf-8') as f:
-                f.write(ref_content)
-            
-            if self.logger:
-                self.logger.info(f"Created reference note: {ref_note_path.name}")
-            
-            # Update backlinks in referenced files
+            # Update backlinks in referenced files (keep this functionality)
             self._create_backlinks(file_analysis, cross_refs)
             
         except Exception as e:

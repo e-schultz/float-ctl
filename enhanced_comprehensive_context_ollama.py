@@ -230,11 +230,31 @@ class EnhancedComprehensiveDailyContext:
                 'processing_date': date
             }
             
-            # Generate .dis content
-            dis_content = self.dis_generator.generate_float_dis(
-                file_metadata, chroma_metadata, content_analysis, 
-                f"conv_{conv_data['conversation_id'][:12]}"
-            )
+            # Generate .dis content using streamlined template (Issue #4: 80% size reduction)
+            try:
+                from streamlined_dis_template import StreamlinedFloatDisGenerator
+                streamlined_generator = StreamlinedFloatDisGenerator()
+                
+                # Use streamlined template with enhanced patterns if available
+                enhanced_patterns = None
+                if hasattr(self, 'pattern_detector') and self.pattern_detector:
+                    enhanced_patterns = self.pattern_detector.extract_comprehensive_patterns(
+                        conv_data.get('content', '')
+                    )
+                
+                dis_content = streamlined_generator.generate_float_dis(
+                    file_metadata, chroma_metadata, content_analysis,
+                    f"conv_{conv_data['conversation_id'][:12]}",
+                    enhanced_patterns
+                )
+                self.logger.info("Using streamlined .dis template (80% reduction vs verbose)")
+            except ImportError:
+                # Fallback to original verbose template
+                dis_content = self.dis_generator.generate_float_dis(
+                    file_metadata, chroma_metadata, content_analysis, 
+                    f"conv_{conv_data['conversation_id'][:12]}"
+                )
+                self.logger.warning("Streamlined template unavailable, using verbose fallback")
             
             # Add conversation-specific enhancements to the template
             enhanced_dis_content = self._enhance_conversation_dis_content(
