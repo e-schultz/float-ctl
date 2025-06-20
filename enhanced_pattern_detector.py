@@ -3,6 +3,7 @@ Enhanced Pattern Detection System for FLOAT Daemon
 Integrates sophisticated pattern recognition from tripartite chunker for all file types.
 
 This module brings conversation-level intelligence to general file processing.
+Issue #5: Now includes plugin architecture support for extensible pattern detection.
 """
 
 import re
@@ -11,16 +12,61 @@ from typing import Dict, List, Tuple, Optional, Set
 from pathlib import Path
 from datetime import datetime
 
+# Plugin system integration - Issue #5
+try:
+    from pattern_plugin_interface import PatternPluginManager
+    PLUGIN_SYSTEM_AVAILABLE = True
+except ImportError:
+    PLUGIN_SYSTEM_AVAILABLE = False
+    print("⚠️  Plugin system not available - falling back to built-in patterns")
+
 
 class EnhancedFloatPatternDetector:
     """
     Enhanced pattern detection system incorporating patterns from the tripartite chunker.
     Provides sophisticated FLOAT signal detection for any file type.
+    
+    Issue #5: Now supports plugin architecture for extensible pattern detection.
     """
     
-    def __init__(self):
+    def __init__(self, logger=None):
+        self.logger = logger
         self.patterns = self._initialize_enhanced_patterns()
         self.tripartite_patterns = self._initialize_tripartite_patterns()
+        
+        # Initialize plugin system - Issue #5
+        self.plugin_manager = None
+        if PLUGIN_SYSTEM_AVAILABLE:
+            self._initialize_plugin_system()
+    
+    def _initialize_plugin_system(self):
+        """Initialize the plugin system for extensible pattern detection."""
+        try:
+            from pattern_plugin_interface import (
+                PatternPluginManager, 
+                CoreFloatPatternPlugin, 
+                EnhancedFloatPatternPlugin,
+                PersonalPatternPlugin
+            )
+            
+            self.plugin_manager = PatternPluginManager(logger=self.logger)
+            
+            # Register built-in plugins
+            self.plugin_manager.register_plugin(CoreFloatPatternPlugin())
+            self.plugin_manager.register_plugin(EnhancedFloatPatternPlugin())
+            self.plugin_manager.register_plugin(PersonalPatternPlugin())
+            
+            # Load any external plugins from plugins/ directory
+            self.plugin_manager.load_all_plugins()
+            
+            if self.logger:
+                plugin_count = len(self.plugin_manager.plugins)
+                self.logger.info(f"🔌 Initialized plugin system with {plugin_count} plugins")
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"Failed to initialize plugin system: {e}")
+            self.plugin_manager = None
         
     def _initialize_enhanced_patterns(self) -> Dict:
         """Initialize comprehensive pattern library for all content types."""
@@ -177,15 +223,33 @@ class EnhancedFloatPatternDetector:
         """
         Extract all FLOAT patterns from content with enhanced analysis.
         Returns comprehensive pattern analysis for any file type.
+        
+        Issue #5: Now includes plugin-based pattern detection alongside built-in patterns.
         """
         
         if not content:
             return self._empty_pattern_result()
         
-        # Core pattern extraction
+        # Plugin-based pattern extraction - Issue #5
+        plugin_patterns = {}
+        if self.plugin_manager:
+            try:
+                file_type = file_path.suffix[1:] if file_path and file_path.suffix else "unknown"
+                metadata = {'file_path': str(file_path)} if file_path else None
+                plugin_patterns = self.plugin_manager.detect_patterns(content, metadata, file_type)
+                
+                if self.logger:
+                    plugin_pattern_count = sum(1 for p in plugin_patterns.values() if p.get('has_pattern', False))
+                    self.logger.debug(f"🔌 Plugin patterns detected: {plugin_pattern_count}")
+                    
+            except Exception as e:
+                if self.logger:
+                    self.logger.warning(f"Plugin pattern detection failed: {e}")
+        
+        # Core pattern extraction (built-in)
         core_patterns = self._extract_core_float_patterns(content)
         
-        # Extended pattern extraction
+        # Extended pattern extraction (built-in)
         extended_patterns = self._extract_extended_float_patterns(content)
         
         # Document structure analysis
@@ -209,6 +273,7 @@ class EnhancedFloatPatternDetector:
         return {
             'core_float_patterns': core_patterns,
             'extended_float_patterns': extended_patterns,
+            'plugin_patterns': plugin_patterns,  # Issue #5: Plugin-detected patterns
             'document_structure': structure_patterns,
             'tripartite_classification': classification,
             'signal_analysis': signal_analysis,
@@ -220,7 +285,9 @@ class EnhancedFloatPatternDetector:
                 'word_count': len(content.split()),
                 'line_count': len(content.split('\n')),
                 'analysis_timestamp': datetime.now().isoformat(),
-                'pattern_detector_version': '2.0'
+                'pattern_detector_version': '2.1',  # Updated for plugin support
+                'plugin_system_enabled': self.plugin_manager is not None,
+                'plugin_count': len(self.plugin_manager.plugins) if self.plugin_manager else 0
             }
         }
     
