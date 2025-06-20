@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Running the Daemon
+### Running lf1m (The Boundary Guardian)
 ```bash
-# Basic daemon startup (monitors dropzone folder)
-python streamlined_float_daemon.py /path/to/dropzone/folder
+# Awaken lf1m for basic dropzone monitoring
+python lf1m_daemon.py /path/to/dropzone/folder
 
-# With Ollama summarization enabled
-python streamlined_float_daemon.py /path/to/dropzone/folder --enable-ollama
+# Summon lf1m with Ollama wisdom enhancement
+python lf1m_daemon.py /path/to/dropzone/folder --enable-ollama
 
-# Process existing files before starting monitoring
-python streamlined_float_daemon.py /path/to/dropzone/folder --process-existing
+# Let lf1m munch existing files before watching
+python lf1m_daemon.py /path/to/dropzone/folder --process-existing
 
-# Full configuration example
-python streamlined_float_daemon.py ~/dropzone \
+# Full lf1m summoning with all powers
+python lf1m_daemon.py ~/dropzone \
   --vault-path ~/vault \
   --chroma-path ~/github/chroma-data \
   --enable-ollama \
@@ -294,6 +294,83 @@ git rebase main
 # refactor: code improvements without functionality changes
 ```
 
+### GitHub Issue Workflow
+
+The FLOAT project uses GitHub issues to track improvements, bugs, and architecture decisions. This maintains development history and provides linkable references for daily logs and archaeological findings.
+
+#### Creating Issues
+```bash
+# Create a new issue for bugs
+gh issue create --title "Fix pattern detection bug" --body "Description of the problem..." --label "bug"
+
+# Create enhancement issues
+gh issue create --title "Add new pattern support" --body "Enhancement description..." --label "enhancement"
+
+# Create issues with full context
+gh issue create --title "Issue title" --body "$(cat <<'EOF'
+## Problem
+Describe the problem clearly
+
+## Expected Behavior
+What should happen instead
+
+## Files Involved
+- List relevant files
+
+## Priority
+High/Medium/Low and reasoning
+EOF
+)" --label "bug"
+```
+
+#### Managing Issues
+```bash
+# List open issues
+gh issue list
+
+# View specific issue
+gh issue view 1
+
+# Add comments to issues
+gh issue comment 1 --body "Update on progress..."
+
+# Close issues when fixed
+gh issue close 1 --comment "Fixed in commit abc123"
+
+# Link issues in commits
+git commit -m "fix: resolve duplicate links
+
+Fixes #1 - implemented deduplication logic in template generation"
+```
+
+#### Issue Referencing in Daily Logs
+```markdown
+## Brain Boot
+- ctx:: 2025-06-20 - 9:00am
+- issue:: working on #1 (duplicate link generation)
+- progress:: identified root cause in float_dis_template_system.py
+
+## End of Day
+- ctx:: 2025-06-20 - 5:00pm  
+- completed:: #1 - duplicate links fixed
+- created:: #6 - new issue for pattern enhancement discovered during fix
+```
+
+#### Issue Categories and Labels
+- **bug**: Problems with current functionality
+- **enhancement**: New features or improvements
+- **documentation**: Updates to docs or inline comments
+- **architecture**: Design discussions and structural changes
+
+#### Integration with FLOAT Patterns
+Issues become part of the archaeological record:
+- Reference issues in `ctx::` markers during development
+- Use `highlight::` to mark important insights from issue discussions
+- Include issue links in `float.dispatch()` when completing work
+- Create follow-up issues when discoveries emerge during implementation
+
+```
+
 ### Performance Monitoring
 ```bash
 # Monitor real-time performance metrics
@@ -323,7 +400,7 @@ This is a FLOAT (Feed-Log-Offload-Archive-Trunk) knowledge management system tha
 
 ### Key Components
 
-1. **Streamlined Daemon (`streamlined_float_daemon.py`)**: Main entry point that watches the dropzone folder and orchestrates basic file processing. Simplified to focus on monitoring and delegation.
+1. **lf1m - Little Fucker Daemon (`lf1m_daemon.py`)**: The Boundary Guardian who stands at the threshold between chaos and knowledge. Sniffs incoming files, munches content, and spits out wisdom. The neurodivergent file processor who screams at prompts.
 
 2. **Enhanced Integration System (`enhanced_integration.py`)**: Central hub for sophisticated content analysis, tripartite routing, and cross-system coordination. Bridges daemon with specialized processing systems.
 
@@ -465,7 +542,7 @@ Environment variables:
 ## File Structure
 
 Current active files in the system:
-- `streamlined_float_daemon.py` - Main daemon (entry point, simplified)
+- `lf1m_daemon.py` - The Boundary Guardian (main entry point, file muncher)
 - `enhanced_integration.py` - Enhanced ecosystem integration (central hub)
 - `enhanced_pattern_detector.py` - Comprehensive pattern analysis (40+ patterns)
 - `enhanced_comprehensive_context_ollama.py` - Context aggregation with Ollama
@@ -546,7 +623,7 @@ sudo apt-get install libmagic1  # Ubuntu
 
 **Import errors on daemon startup:**
 - Ensure all files are in the same directory
-- Check that `streamlined_float_daemon.py` is the entry point
+- Check that `lf1m_daemon.py` is the entry point
 - Verify `enhanced_pattern_detector.py` is available
 - Verify `enhanced_integration.py` is available
 - Check python path includes the current directory
@@ -649,7 +726,7 @@ python -c "from config import FloatConfig; c=FloatConfig('float-config.json'); p
 export FLOAT_LOG_LEVEL=DEBUG
 
 # Start daemon with verbose output
-python streamlined_float_daemon.py ~/dropzone --log-level DEBUG
+python lf1m_daemon.py ~/dropzone --log-level DEBUG
 
 # Monitor logs in real-time
 tail -f ~/float-dropzone/.logs/float_daemon.log | jq '.'
@@ -658,10 +735,10 @@ tail -f ~/float-dropzone/.logs/float_daemon.log | jq '.'
 **Memory and Performance Profiling:**
 ```bash
 # Profile memory usage (install memory_profiler first: pip install memory_profiler)
-python -m memory_profiler streamlined_float_daemon.py
+python -m memory_profiler lf1m_daemon.py
 
 # Profile CPU usage with cProfile
-python -m cProfile -o profile_output.prof streamlined_float_daemon.py
+python -m cProfile -o profile_output.prof lf1m_daemon.py
 python -c "import pstats; p = pstats.Stats('profile_output.prof'); p.sort_stats('cumulative').print_stats(20)"
 
 # Monitor system resources

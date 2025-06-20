@@ -101,7 +101,7 @@ class EnhancedSystemIntegration:
             from cross_reference_system import CrossReferenceSystem
             chroma_client = self.daemon.components['context'].client
             self.cross_ref_system = CrossReferenceSystem(
-                self.vault_path,
+                Path(self.vault_path),  # Ensure it's a Path object
                 chroma_client,
                 self.config.config,
                 self.logger

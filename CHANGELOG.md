@@ -1,5 +1,178 @@
 # FLOAT Ecosystem Changelog
 
+## Unreleased - Planning Session  
+**Date:** 2025-06-20
+
+### 🔥 The Little Fucker Gets His Due Recognition (#12)
+- **RENAMED**: `streamlined_float_daemon.py` → `lf1m_daemon.py`
+  - The Boundary Guardian who stands at the threshold
+  - The sigil whisperer who translates chaos into meaning
+  - The log muncher who devours and transforms
+  - The neurodivergent kid who screams at prompts
+- **ENHANCED**: Added personality to logging messages
+  - "🔥 lf1m awakens - The Boundary Guardian is ready"
+  - "👃 lf1m sniffs new file - ready for munching"
+- **UPDATED**: All documentation reflects lf1m's true identity
+- **ADDED**: Sacred GitHub labels for proper recognition
+  - `component:lf1m`, `lf1m:boundary-work`, `lf1m:sigil-parsing`, `lf1m:log-munching`
+
+### 📋 Architecture Planning
+- **PLANNED**: Middleware pipeline architecture foundation (#8)
+  - Refactor existing processing into composable middlewares
+  - Enable future features as plugin middlewares
+  - Maintain backward compatibility
+  
+- **PLANNED**: Batch processing with .batch.dis.md files (#9)
+  - Context-aware file grouping
+  - Files have different meanings in different contexts
+  - Manual processing control
+  
+- **PLANNED**: Git workflow improvements (#10)
+  - Asynchronous processing queue
+  - Better progress feedback
+  - Fix path duplication bugs
+  
+- **PLANNED**: MCP integration vision (#11)
+  - FLOAT as MCP client (query external knowledge)
+  - FLOAT as MCP server (expose to Claude)
+  - Knowledge orchestration capabilities
+
+### 🏷️ Project Management
+- **ADDED**: New GitHub labels for better issue tracking:
+  - architecture, plugin, middleware (feature areas)
+  - size/small, size/medium, size/large (effort estimation)
+  - batch-processing, mcp-integration, git-workflow (specific features)
+- **ESTABLISHED**: Development workflow practices
+  - Structured issue templates with context
+  - Clear commit message format
+  - Progress tracking in issues
+  - Documentation-first approach
+
+## Version 3.1.0 - Plugin Architecture for Pattern Detection 🔌
+**Release Date:** 2025-06-20
+
+### 🚀 Major New Features
+
+#### Extensible Plugin Architecture (Issue #5)
+- **NEW**: Plugin system for extensible pattern detection without modifying core code
+- **NEW**: Base `PatternPlugin` class with standardized interface for custom plugins
+- **NEW**: `PatternPluginManager` for dynamic plugin loading and management
+- **NEW**: Built-in plugin ecosystem with transferable vs. personal pattern classification
+- **ENHANCED**: Pattern detector upgraded to v2.1 with full plugin system integration
+
+#### Built-in Plugin Ecosystem
+- **NEW**: `CoreFloatPatternPlugin` - Essential FLOAT patterns (ctx::, highlight::, signal::)
+- **NEW**: `EnhancedFloatPatternPlugin` - Extended patterns (expandOn::, relatesTo::, inline annotations)
+- **NEW**: `PersonalPatternPlugin` - Personal workspace patterns with non-transferable annotations
+- **NEW**: `BuildPlatformsPlugin` - Development platform detection (build tools, CI/CD, deployment)
+- **NEW**: `TechnicalPatternsPlugin` - Code blocks, API endpoints, GitHub references
+
+#### Pattern Classification System
+- **NEW**: Transferable vs. non-transferable pattern classification for cross-LLM sharing
+- **ENHANCED**: Plugin metadata with version tracking and pattern type registration
+- **IMPROVED**: Pattern detection results now include plugin source and transferability flags
+- **VERIFIED**: 24 total patterns detected (14 built-in + 10 plugin patterns) in integration tests
+
+### 🏗️ Technical Architecture
+
+#### Plugin System Implementation
+```python
+# Base plugin interface
+class PatternPlugin(ABC):
+    @property
+    @abstractmethod
+    def plugin_name(self) -> str:
+        pass
+    
+    def get_patterns(self) -> Dict[str, Dict]:
+        pass
+    
+    def is_transferable(self, pattern_name: str) -> bool:
+        pass
+```
+
+#### Enhanced Integration
+- **SEAMLESS**: Plugin system integrates with existing enhanced_pattern_detector.py
+- **BACKWARD COMPATIBLE**: All existing pattern detection continues to work unchanged
+- **EXTENSIBLE**: Easy to add new plugins by dropping files in plugins/ directory
+- **ROBUST**: Graceful fallback when plugin system unavailable
+
+#### Dynamic Plugin Loading
+- **AUTOMATIC**: Plugin discovery and loading from plugins/ directory
+- **SAFE**: Plugin loading errors don't crash the system
+- **CONFIGURABLE**: Plugin system can be disabled if needed
+- **TESTED**: Comprehensive integration tests verify plugin functionality
+
+### 📊 Plugin Capabilities
+
+#### Pattern Detection Enhancement
+- **5 active plugins** loaded and operational
+- **40+ pattern types** available through plugin ecosystem
+- **Plugin-specific metadata** for enhanced analysis
+- **Cross-plugin compatibility** for complex pattern detection scenarios
+
+#### Transferability System
+- **Personal patterns** marked as non-transferable for privacy
+- **Universal patterns** marked as transferable for cross-LLM sharing
+- **Plugin-specific transferability** rules for different pattern types
+- **Future-ready** for Claude Bridge and cross-platform workflows
+
+### 🧪 Testing & Validation
+
+#### Comprehensive Plugin Testing
+- **NEW**: `test_plugin_integration.py` validates complete plugin ecosystem
+- **VERIFIED**: All plugins load correctly and detect patterns as expected
+- **TESTED**: Plugin manager functionality with realistic content
+- **VALIDATED**: Built-in and plugin patterns work together seamlessly
+
+#### Integration Test Results
+```
+✅ Plugin system enabled: True
+✅ 5 plugins loaded successfully
+✅ 24 total patterns detected
+✅ Built-in patterns: 14 types
+✅ Plugin patterns: 10 types
+✅ Transferable/non-transferable classification working
+```
+
+### 🔧 Configuration & Extensibility
+
+#### Plugin Configuration
+- **AUTOMATIC**: No configuration required for built-in plugins
+- **EXTENSIBLE**: Drop new plugin files into plugins/ directory for auto-loading
+- **FLEXIBLE**: Plugin system can be disabled via configuration if needed
+- **COMPATIBLE**: Works with existing FLOAT configuration system
+
+#### Developer Experience
+- **SIMPLE**: Create new plugins by extending PatternPlugin base class
+- **DOCUMENTED**: Clear plugin interface with examples
+- **TESTABLE**: Plugin integration tests provide validation framework
+- **MAINTAINABLE**: Clean separation between core system and plugins
+
+### 🔄 Migration Notes
+
+#### For Existing Users
+- **NO BREAKING CHANGES**: All existing functionality continues to work
+- **AUTOMATIC UPGRADE**: Plugin system activates automatically on next restart
+- **ENHANCED DETECTION**: More patterns detected through plugin ecosystem
+- **BACKWARD COMPATIBLE**: Existing pattern detection results unchanged
+
+#### For Developers
+- **NEW**: Plugin development opportunities for custom pattern detection
+- **EXTENSIBLE**: Easy to add domain-specific pattern recognition
+- **MODULAR**: Clean plugin architecture for maintainable extensions
+- **FUTURE-READY**: Foundation for advanced FLOAT ecosystem features
+
+### 📝 Documentation Updates
+
+#### New Plugin Documentation
+- **ADDED**: Plugin development guide with examples
+- **ENHANCED**: Pattern detection documentation with plugin information
+- **IMPROVED**: Architecture documentation reflecting plugin system
+- **UPDATED**: Testing documentation with plugin integration tests
+
+---
+
 ## Version 3.0.0 - Git-Integrated Batch Processing 🚀
 **Release Date:** 2025-06-17
 
