@@ -145,20 +145,15 @@ class LF1MDaemon(FileSystemEventHandler):
         except ImportError as e:
             raise RuntimeError(f"Enhanced context aggregator required: {e}")
         
-        # Try Ollama summarizer
-        if self.config.get('enable_ollama', True):
-            try:
-                from ollama_enhanced_float_summarizer import OllamaFloatSummarizer
-                components['summarizer'] = OllamaFloatSummarizer()
-                components['ollama_enabled'] = True
-                self.logger.info("Ollama summarizer initialized")
-            except ImportError as e:
-                self.logger.warning(f"Ollama summarizer not available: {e}")
-                components['summarizer'] = None
-                components['ollama_enabled'] = False
+        # Reuse Ollama summarizer from context aggregator (avoid duplicate connections)
+        if self.config.get('enable_ollama', True) and hasattr(components['context'], 'summarizer'):
+            components['summarizer'] = components['context'].summarizer
+            components['ollama_enabled'] = components['context'].ollama_enabled
+            self.logger.info("Ollama summarizer shared from context aggregator (avoiding duplicate connection)")
         else:
             components['summarizer'] = None
             components['ollama_enabled'] = False
+            self.logger.info("Ollama summarizer disabled")
         
         # Initialize .dis generator
         try:

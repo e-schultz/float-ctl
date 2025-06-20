@@ -81,11 +81,11 @@ class EnhancedSystemIntegration:
             enable_ollama = self.config.get('enable_ollama', False) or \
                           self.daemon.config.get('enable_ollama', False)
             
-            if enable_ollama:
-                from ollama_enhanced_float_summarizer import OllamaFloatSummarizer
-                self.ollama_summarizer = OllamaFloatSummarizer()
+            if enable_ollama and self.daemon.components.get('summarizer'):
+                # Reuse the daemon's already-created summarizer instead of creating a new one
+                self.ollama_summarizer = self.daemon.components['summarizer']
                 self.ollama_enabled = True
-                self.logger.info("Ollama summarizer initialized for enhanced analysis")
+                self.logger.info("Ollama summarizer shared from daemon (avoiding duplicate connections)")
             else:
                 self.ollama_summarizer = None
                 self.ollama_enabled = False
