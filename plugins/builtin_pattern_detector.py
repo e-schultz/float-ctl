@@ -28,22 +28,40 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
     
     @property
     def name(self) -> str:
+        """
+        Returns the name of the plugin.
+        """
         return "builtin_pattern_detector"
     
     @property
     def version(self) -> str:
+        """
+        Return the version string of the built-in pattern detector plugin.
+        """
         return "3.1.0"
     
     @property
     def description(self) -> str:
+        """
+        Returns a description of the plugin as a built-in comprehensive FLOAT pattern detector supporting over 40 pattern types.
+        """
         return "Built-in comprehensive FLOAT pattern detector with 40+ pattern types"
     
     @property
     def author(self) -> str:
+        """
+        Return the author of the plugin.
+        """
         return "FLOAT Core Team"
     
     @property
     def supported_patterns(self) -> List[str]:
+        """
+        Return a list of pattern categories supported by the built-in pattern detector.
+        
+        Returns:
+            List of supported pattern category names as strings.
+        """
         return [
             "ctx_markers", "highlight_markers", "signal_markers", "float_dispatch",
             "sysop_comments", "expand_on", "relates_to", "remember_when", "story_time",
@@ -52,7 +70,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         ]
     
     def initialize(self, config: Optional[Dict] = None, logger=None) -> bool:
-        """Initialize the pattern detector with patterns and configuration"""
+        """
+        Initializes the pattern detector plugin with pattern libraries and optional configuration.
+        
+        Returns:
+            bool: True if initialization is successful.
+        """
         super().initialize(config, logger)
         
         # Initialize pattern libraries
@@ -66,9 +89,9 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
     
     def detect_patterns(self, content: str, file_path: Optional[Path] = None) -> Dict[str, Any]:
         """
-        Main pattern detection interface - comprehensive FLOAT pattern extraction.
+        Performs comprehensive pattern detection on the provided content and returns analysis results.
         
-        This is the plugin interface method that calls the comprehensive pattern analysis.
+        Analyzes the input content for FLOAT patterns, document structure, persona annotations, platform references, and other supported categories. Returns a dictionary containing the analysis results, total patterns found, plugin metadata, and a success indicator. On error, returns a failure response with error details.
         """
         try:
             results = self.extract_comprehensive_patterns(content, file_path)
@@ -99,9 +122,16 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
     
     def extract_comprehensive_patterns(self, content: str, file_path: Optional[Path] = None) -> Dict:
         """
-        Comprehensive pattern extraction - main analysis method.
+        Performs comprehensive pattern extraction and content analysis on the provided text.
         
-        This method provides the same interface as the original EnhancedFloatPatternDetector.
+        Analyzes the content for core and extended FLOAT patterns, persona annotations, document structure, platform integration references, signal density, tripartite classification, cross-reference potential, and BBS heritage patterns. Returns a dictionary containing all extracted analyses and relevant metadata.
+        
+        Parameters:
+            content (str): The text content to analyze.
+            file_path (Optional[Path]): Optional file path associated with the content.
+        
+        Returns:
+            Dict: A dictionary containing detailed pattern analysis results and metadata.
         """
         if not content or not content.strip():
             return self._empty_analysis_result()
@@ -144,7 +174,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return analysis
     
     def is_high_priority_content(self, pattern_analysis: Dict) -> bool:
-        """Determine if content should be prioritized based on pattern analysis"""
+        """
+        Determine whether the analyzed content qualifies as high priority based on signal density, presence of core FLOAT signals, persona annotations, or BBS heritage patterns.
+        
+        Returns:
+            bool: True if any high-priority criteria are met; otherwise, False.
+        """
         # High signal density
         signal_analysis = pattern_analysis.get('signal_analysis', {})
         if signal_analysis.get('has_high_signal_density', False):
@@ -168,7 +203,15 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return False
     
     def get_content_complexity_assessment(self, pattern_analysis: Dict) -> str:
-        """Assess content complexity: 'low', 'medium', or 'high'"""
+        """
+        Classifies the complexity of analyzed content as 'low', 'medium', or 'high' based on word count, signal density, document structure, and platform references.
+        
+        Parameters:
+            pattern_analysis (Dict): The analysis results containing word count, signal density, document structure, and platform integration data.
+        
+        Returns:
+            str: The complexity classification of the content ('low', 'medium', or 'high').
+        """
         word_count = pattern_analysis.get('word_count', 0)
         signal_density = pattern_analysis.get('signal_analysis', {}).get('signal_density_per_100_words', 0)
         
@@ -209,7 +252,15 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
             return 'low'
     
     def extract_actionable_insights(self, pattern_analysis: Dict) -> List[Dict]:
-        """Extract actionable insights from pattern analysis"""
+        """
+        Extracts actionable insights from the provided pattern analysis, including high-priority action items, FLOAT dispatch patterns, cross-reference opportunities, and platform integration suggestions.
+        
+        Parameters:
+            pattern_analysis (Dict): The comprehensive pattern analysis result from content analysis.
+        
+        Returns:
+            List[Dict]: A list of actionable insight dictionaries, each containing type, priority, content, and source fields.
+        """
         insights = []
         
         # Action items from document structure
@@ -260,7 +311,9 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return insights
     
     def _initialize_enhanced_patterns(self) -> Dict:
-        """Initialize comprehensive pattern library for all content types."""
+        """
+        Creates and returns a dictionary of compiled regular expressions for detecting core and extended FLOAT patterns, inline annotations, and line-level markers across all supported content types.
+        """
         return {
             # Core FLOAT signals (existing + enhanced)
             'ctx_markers': re.compile(r'ctx::\s*([^\n]+)', re.IGNORECASE),
@@ -294,7 +347,9 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _initialize_tripartite_patterns(self) -> Dict:
-        """Initialize tripartite classification patterns"""
+        """
+        Return sets of keywords used to identify concept, framework, and metaphor domains for tripartite content classification.
+        """
         return {
             'concept_indicators': {
                 'theory', 'principle', 'concept', 'definition', 'understanding',
@@ -311,7 +366,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _extract_core_float_patterns(self, content: str) -> Dict:
-        """Extract core FLOAT patterns from content"""
+        """
+        Extracts core FLOAT patterns from the provided content using predefined regular expressions.
+        
+        Returns:
+            A dictionary mapping each core pattern name to its count, a limited list of matches (up to 10), and a presence flag.
+        """
         results = {}
         
         for pattern_name, pattern_regex in self.patterns.items():
@@ -326,7 +386,14 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return results
     
     def _extract_extended_float_patterns(self, content: str) -> Dict:
-        """Extract extended FLOAT patterns from content"""
+        """
+        Extracts extended FLOAT patterns from the provided content.
+        
+        Searches for a predefined set of extended FLOAT patterns using compiled regular expressions. For each pattern, returns the count of matches, up to five example matches, and a flag indicating presence.
+        
+        Returns:
+            Dictionary mapping each extended pattern name to its match count, sample matches, and presence flag.
+        """
         results = {}
         
         extended_patterns = ['expand_on', 'relates_to', 'remember_when', 'story_time', 
@@ -348,7 +415,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return results
     
     def _extract_persona_patterns(self, content: str) -> Dict:
-        """Extract persona annotation patterns"""
+        """
+        Extracts persona annotation patterns from the content and summarizes their presence.
+        
+        Returns:
+            A dictionary containing counts and sample matches for each persona type, total annotations found, whether any persona system is present, the dominant persona (if any), and the number of distinct personas detected.
+        """
         persona_patterns = [
             ('sysop', r'\[sysop::([^\]]+)\]'),
             ('karen', r'\[karen::([^\]]+)\]'),
@@ -387,7 +459,11 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _analyze_document_structure(self, content: str) -> Dict:
-        """Analyze document structure and formatting"""
+        """
+        Analyze the structural elements and formatting of the document content.
+        
+        Returns a dictionary summarizing headings (count, levels, titles), list items (bullet and numbered), code blocks and inline code (with density), detected action items, and an overall structure complexity assessment.
+        """
         lines = content.split('\n')
         
         # Headings analysis
@@ -438,7 +514,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _detect_platform_integration(self, content: str) -> Dict:
-        """Detect platform integration patterns"""
+        """
+        Detects references to known platform integration patterns within the provided content.
+        
+        Returns:
+            dict: A dictionary containing counts and examples of detected platform references, total number of platform mentions, a flag indicating if any platform was detected, and a list of detected platform names.
+        """
         platforms = {
             'lovable': r'lovable\.dev',
             'v0': r'v0\.dev',
@@ -470,7 +551,15 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _calculate_signal_analysis(self, analysis: Dict) -> Dict:
-        """Calculate signal density and analysis metrics"""
+        """
+        Compute signal analysis metrics including total signals, signal density, and signal-to-noise ratio based on extracted pattern counts.
+        
+        Parameters:
+            analysis (Dict): Dictionary containing pattern extraction results and word count.
+        
+        Returns:
+            Dict: Metrics including total core signals, extended patterns, persona annotations, overall signal count, signal density per 100 words, high density flag, and signal-to-noise ratio.
+        """
         word_count = analysis.get('word_count', 1)
         
         # Count core signals
@@ -502,7 +591,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _classify_tripartite_domain(self, content: str, analysis: Dict) -> Dict:
-        """Classify content into tripartite domains"""
+        """
+        Classifies the content into conceptual domains of concept, framework, or metaphor based on keyword indicators.
+        
+        Returns:
+            A dictionary containing normalized domain scores, the primary domain, confidence level, and a flag indicating if the content spans multiple domains.
+        """
         content_lower = content.lower()
         
         # Score each domain
@@ -539,7 +633,16 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _analyze_cross_reference_potential(self, content: str, analysis: Dict) -> Dict:
-        """Analyze potential for cross-referencing"""
+        """
+        Evaluates the content's potential for cross-referencing based on detected signals, platform references, document structure, and presence of links or mentions.
+        
+        Parameters:
+            content (str): The text content to analyze.
+            analysis (Dict): The existing pattern analysis results for the content.
+        
+        Returns:
+            Dict: A dictionary containing the cross-reference score (0.0–1.0), the number of detected links or mentions, and a flag indicating high cross-reference potential.
+        """
         # Factors that increase cross-reference potential
         score = 0.0
         
@@ -579,7 +682,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         }
     
     def _detect_bbs_heritage_patterns(self, content: str) -> Dict:
-        """Detect BBS heritage patterns"""
+        """
+        Detects legacy BBS-related patterns such as 'float.dis', 'float.diis', 'file_id.diz', and 'float.rfc' within the provided content.
+        
+        Returns:
+            A dictionary mapping each BBS heritage pattern to its count, up to three example matches, and a presence flag.
+        """
         patterns = {
             'float_dis': re.compile(r'float\.dis', re.IGNORECASE),
             'float_diis': re.compile(r'float\.diis', re.IGNORECASE),
@@ -599,7 +707,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return results
     
     def _calculate_structure_complexity(self, headings: List, list_items: List, code_blocks: List) -> str:
-        """Calculate overall structure complexity"""
+        """
+        Assess the structural complexity of content based on the number of headings, list items, and code blocks.
+        
+        Returns:
+            str: 'low', 'medium', or 'high' indicating the overall structure complexity.
+        """
         complexity_score = 0
         
         if len(headings) > 5:
@@ -617,7 +730,15 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
             return 'low'
     
     def _count_total_patterns(self, analysis_results: Dict) -> int:
-        """Count total patterns found across all categories"""
+        """
+        Return the total number of patterns detected across core FLOAT patterns, extended patterns, and persona annotations.
+        
+        Parameters:
+            analysis_results (Dict): The analysis results containing pattern detection data.
+        
+        Returns:
+            int: The total count of all detected patterns and annotations.
+        """
         total = 0
         
         # Core patterns
@@ -636,7 +757,12 @@ class BuiltinPatternDetector(PatternDetectorPlugin):
         return total
     
     def _empty_analysis_result(self) -> Dict:
-        """Return empty analysis result for invalid content"""
+        """
+        Return a default analysis result dictionary representing empty or invalid content.
+        
+        Returns:
+            Dict: An analysis result with zero counts and default values for all analysis categories.
+        """
         return {
             'content_length': 0,
             'word_count': 0,

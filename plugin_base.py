@@ -41,34 +41,51 @@ class FloatPlugin(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Unique plugin name (should be filename-safe)"""
+        """
+        Returns the unique, filename-safe name of the plugin.
+        """
         pass
     
     @property
     @abstractmethod
     def version(self) -> str:
-        """Plugin version (semver format recommended)"""
+        """
+        Returns the version of the plugin, typically in semantic versioning format.
+        """
         pass
     
     @property
     @abstractmethod
     def description(self) -> str:
-        """Human-readable plugin description"""
+        """
+        Returns a human-readable description of the plugin.
+        """
         pass
     
     @property
     def author(self) -> str:
-        """Plugin author (optional)"""
+        """
+        Returns the author of the plugin.
+        
+        Defaults to "Unknown" if not specified by the plugin implementation.
+        """
         return "Unknown"
     
     @property
     def requires_float_version(self) -> str:
-        """Minimum FLOAT version required (optional)"""
+        """
+        Returns the minimum required FLOAT version for the plugin.
+        
+        Returns:
+            str: The minimum FLOAT version required to use this plugin. Defaults to "3.1.0".
+        """
         return "3.1.0"
     
     @property
     def metadata(self) -> Dict[str, Any]:
-        """Complete plugin metadata"""
+        """
+        Return a dictionary containing the plugin's metadata, including name, version, description, author, required FLOAT version, load timestamp, and plugin type.
+        """
         return {
             'name': self.name,
             'version': self.version,
@@ -81,8 +98,13 @@ class FloatPlugin(ABC):
     
     def validate(self) -> bool:
         """
-        Validate plugin configuration and dependencies.
-        Override in subclasses for custom validation.
+        Validates that the plugin's name and version are non-empty strings and that the name is filename-safe.
+        
+        Raises:
+            PluginValidationError: If the name or version is invalid.
+        
+        Returns:
+            bool: True if validation passes.
         """
         # Basic validation
         if not self.name or not isinstance(self.name, str):
@@ -99,8 +121,12 @@ class FloatPlugin(ABC):
     
     def initialize(self, config: Optional[Dict] = None, logger: Optional[logging.Logger] = None) -> bool:
         """
-        Initialize plugin with configuration and logger.
-        Override in subclasses for custom initialization.
+        Initializes the plugin with the provided configuration and logger.
+        
+        Override this method in subclasses to perform custom initialization logic.
+        
+        Returns:
+            bool: True if initialization succeeds.
         """
         self._config = config or {}
         self._logger = logger or logging.getLogger(f"float.plugin.{self.name}")
@@ -108,8 +134,12 @@ class FloatPlugin(ABC):
     
     def cleanup(self) -> bool:
         """
-        Clean up plugin resources.
-        Override in subclasses for custom cleanup.
+        Release any resources held by the plugin.
+        
+        Override this method in subclasses to implement custom cleanup logic.
+        
+        Returns:
+            bool: True if cleanup was successful.
         """
         return True
 
@@ -124,33 +154,46 @@ class PatternDetectorPlugin(FloatPlugin):
     @abstractmethod
     def detect_patterns(self, content: str, file_path: Optional[Path] = None) -> Dict[str, Any]:
         """
-        Detect and extract patterns from content.
+        Detects and extracts patterns from the provided content, optionally considering the file path.
         
-        Args:
-            content: Text content to analyze
-            file_path: Optional path to the source file
-            
+        Parameters:
+            content (str): The text content to analyze for patterns.
+            file_path (Optional[Path]): The path to the source file, if available.
+        
         Returns:
-            Dictionary containing detected patterns, signals, and analysis results.
-            Must include at least:
-            - 'success': bool indicating if detection completed
-            - 'patterns_found': int count of patterns detected
-            - 'analysis_results': dict with detailed findings
+            Dict[str, Any]: A dictionary containing the detection outcome, including:
+                - 'success' (bool): Whether pattern detection completed successfully.
+                - 'patterns_found' (int): The number of patterns detected.
+                - 'analysis_results' (dict): Detailed information about the detected patterns.
         """
         pass
     
     @property
     def supported_patterns(self) -> List[str]:
-        """List of pattern types this plugin can detect"""
+        """
+        Returns a list of pattern types that this plugin can detect.
+        
+        By default, returns an empty list. Subclasses should override to specify supported pattern types.
+        """
         return []
     
     @property
     def pattern_confidence_threshold(self) -> float:
-        """Minimum confidence score for pattern detection (0.0 to 1.0)"""
+        """
+        Returns the minimum confidence score required for pattern detection, as a float between 0.0 and 1.0.
+        """
         return 0.5
     
     def get_pattern_summary(self, detection_results: Dict[str, Any]) -> str:
-        """Generate human-readable summary of detected patterns"""
+        """
+        Generate a human-readable summary of the number of patterns detected.
+        
+        Parameters:
+            detection_results (dict): Dictionary containing detection results, including the 'patterns_found' key.
+        
+        Returns:
+            str: Summary string indicating the number of patterns detected and the plugin's name and version.
+        """
         patterns_found = detection_results.get('patterns_found', 0)
         return f"Detected {patterns_found} patterns using {self.name} v{self.version}"
 
@@ -165,20 +208,25 @@ class ContentAnalyzerPlugin(FloatPlugin):
     @abstractmethod
     def analyze_content(self, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze content and return analysis results.
+        Analyze the provided content and associated metadata, returning a dictionary of analysis results.
         
-        Args:
-            content: Text content to analyze
-            metadata: File metadata and context
-            
+        Parameters:
+            content (str): The text content to be analyzed.
+            metadata (dict): Metadata and contextual information related to the content.
+        
         Returns:
-            Dictionary containing analysis results
+            dict: Analysis results produced by the plugin.
         """
         pass
     
     @property
     def analysis_type(self) -> str:
-        """Type of analysis this plugin performs"""
+        """
+        Returns the type of analysis performed by the plugin.
+        
+        Returns:
+            str: A string describing the analysis type. Defaults to "general".
+        """
         return "general"
 
 class StorageBackendPlugin(FloatPlugin):
@@ -191,18 +239,43 @@ class StorageBackendPlugin(FloatPlugin):
     
     @abstractmethod
     def store_content(self, content: str, metadata: Dict[str, Any], collection: str) -> bool:
-        """Store content with metadata in specified collection"""
+        """
+        Store the provided content and associated metadata in the specified collection.
+        
+        Parameters:
+            content (str): The content to be stored.
+            metadata (Dict[str, Any]): Metadata describing the content.
+            collection (str): The name of the collection where the content will be stored.
+        
+        Returns:
+            bool: True if the content was stored successfully, False otherwise.
+        """
         pass
     
     @abstractmethod
     def search_content(self, query: str, collection: Optional[str] = None, 
                       limit: int = 10) -> List[Dict[str, Any]]:
-        """Search stored content and return results"""
+        """
+                      Searches stored content for entries matching the given query.
+                      
+                      Parameters:
+                          query (str): The search query string.
+                          collection (Optional[str]): The collection to search within, if applicable.
+                          limit (int): The maximum number of results to return.
+                      
+                      Returns:
+                          List[Dict[str, Any]]: A list of dictionaries representing the search results.
+                      """
         pass
     
     @property
     def supports_collections(self) -> bool:
-        """Whether this backend supports multiple collections"""
+        """
+        Indicates whether the storage backend supports multiple collections.
+        
+        Returns:
+            bool: True if multiple collections are supported; otherwise, False.
+        """
         return True
 
 class SummarizerPlugin(FloatPlugin):
@@ -217,26 +290,36 @@ class SummarizerPlugin(FloatPlugin):
     def summarize_content(self, content: str, file_metadata: Dict[str, Any], 
                          processing_hints: Optional[str] = None) -> Dict[str, Any]:
         """
-        Generate summary of content.
-        
-        Args:
-            content: Text content to summarize
-            file_metadata: File metadata and context
-            processing_hints: Optional hints to guide summarization
-            
-        Returns:
-            Dictionary containing summary and metadata
-        """
+                         Generate a summary of the provided content using file metadata and optional processing hints.
+                         
+                         Parameters:
+                             content (str): The text content to be summarized.
+                             file_metadata (Dict[str, Any]): Metadata and contextual information about the file.
+                             processing_hints (Optional[str]): Optional hints to influence the summarization process.
+                         
+                         Returns:
+                             Dict[str, Any]: A dictionary containing the generated summary and related metadata.
+                         """
         pass
     
     @property
     def max_content_length(self) -> int:
-        """Maximum content length this summarizer can handle"""
+        """
+        Returns the maximum content length supported by the summarizer.
+        
+        Returns:
+            int: The maximum number of characters the summarizer can process.
+        """
         return 50000
     
     @property
     def supports_streaming(self) -> bool:
-        """Whether this summarizer supports streaming/chunked content"""
+        """
+        Indicates whether the summarizer supports streaming or chunked content processing.
+        
+        Returns:
+            bool: True if streaming is supported; otherwise, False.
+        """
         return False
 
 # Plugin capability definitions
@@ -244,6 +327,14 @@ class PluginCapability:
     """Defines a specific capability that plugins can provide"""
     
     def __init__(self, name: str, description: str, interface_class: type):
+        """
+        Initialize a PluginCapability instance with a name, description, and associated interface class.
+        
+        Parameters:
+            name (str): The capability's unique name.
+            description (str): A brief description of the capability.
+            interface_class (type): The interface class that plugins must implement for this capability.
+        """
         self.name = name
         self.description = description
         self.interface_class = interface_class
@@ -273,12 +364,29 @@ FLOAT_CAPABILITIES = {
 }
 
 def get_plugin_interface(capability: str) -> Optional[type]:
-    """Get the plugin interface class for a given capability"""
+    """
+    Return the interface class associated with a given plugin capability.
+    
+    Parameters:
+        capability (str): The capability name to look up.
+    
+    Returns:
+        Optional[type]: The interface class for the capability, or None if not found.
+    """
     cap = FLOAT_CAPABILITIES.get(capability)
     return cap.interface_class if cap else None
 
 def validate_plugin_interface(plugin: FloatPlugin, expected_capability: str) -> bool:
-    """Validate that a plugin implements the expected interface"""
+    """
+    Check whether a plugin instance implements the interface required for a specified capability.
+    
+    Parameters:
+        plugin (FloatPlugin): The plugin instance to validate.
+        expected_capability (str): The capability name to check against.
+    
+    Returns:
+        bool: True if the plugin implements the expected interface, False otherwise.
+    """
     expected_interface = get_plugin_interface(expected_capability)
     if not expected_interface:
         return False

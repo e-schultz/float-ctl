@@ -30,7 +30,16 @@ except ImportError:
     try:
         import pkg_resources
         def entry_points(group=None):
-            """Compatibility shim for pkg_resources"""
+            """
+            Provides a compatibility shim for retrieving entry points using pkg_resources.
+            
+            Parameters:
+                group (str, optional): The entry point group to retrieve. If None, returns all entry points grouped by their group name.
+            
+            Returns:
+                If group is specified, returns an iterator over entry points in the given group.
+                If group is None, returns a dictionary mapping group names to lists of entry points.
+            """
             if group:
                 return pkg_resources.iter_entry_points(group)
             else:
@@ -42,6 +51,11 @@ except ImportError:
     except ImportError:
         # No entry point support available
         def entry_points(group=None):
+            """
+            Return an empty list if a group is specified, or an empty dictionary if not.
+            
+            This function serves as a compatibility shim for entry point discovery when no entry point mechanism is available.
+            """
             return [] if group else {}
 
 from plugin_base import (
@@ -59,6 +73,12 @@ class PluginManager:
     """
     
     def __init__(self, logger: Optional[logging.Logger] = None):
+        """
+        Initialize the PluginManager with logging, configuration, and internal data structures for plugin management.
+        
+        Parameters:
+            logger (Optional[logging.Logger]): Logger instance to use for plugin manager messages. If not provided, a default logger is created.
+        """
         self.logger = logger or logging.getLogger("float.plugin_manager")
         
         # Plugin storage by capability
@@ -79,10 +99,10 @@ class PluginManager:
     
     def discover_plugins(self) -> Dict[str, List[str]]:
         """
-        Discover available plugins through entry points.
+        Discovers available plugins for each FLOAT capability using entry points.
         
         Returns:
-            Dictionary mapping capability names to lists of available plugin names
+            Dict[str, List[str]]: A dictionary mapping each capability name to a list of discovered plugin names.
         """
         discovered = defaultdict(list)
         
@@ -114,13 +134,13 @@ class PluginManager:
     
     def load_plugins(self, capability_filter: Optional[List[str]] = None) -> bool:
         """
-        Load plugins for specified capabilities (or all if None).
+        Loads plugins for the specified capabilities or all available capabilities if none are specified.
         
-        Args:
-            capability_filter: List of capability names to load, or None for all
-            
+        Parameters:
+            capability_filter (Optional[List[str]]): List of capability names to load plugins for, or None to load all capabilities.
+        
         Returns:
-            True if at least one plugin loaded successfully
+            bool: True if at least one plugin was loaded successfully; False otherwise.
         """
         if not self.enable_plugins:
             self.logger.info("Plugin loading skipped - plugins disabled")
@@ -155,7 +175,11 @@ class PluginManager:
         return total_loaded > 0
     
     def _load_plugins_for_capability(self, capability_name: str) -> None:
-        """Load all plugins for a specific capability"""
+        """
+        Loads all plugins for a given capability using entry points, up to the configured maximum per capability.
+        
+        Attempts to load and initialize each discovered plugin for the specified capability, validating against the expected interface. Successfully loaded plugins are added to the manager's registry. Logs warnings if the maximum number of plugins is reached and errors if loading fails.
+        """
         entry_point_group = f"float.{capability_name}"
         expected_interface = FLOAT_CAPABILITIES[capability_name].interface_class
         
@@ -180,15 +204,17 @@ class PluginManager:
     
     def _load_single_plugin(self, entry_point, expected_interface: Type, capability_name: str) -> Optional[FloatPlugin]:
         """
-        Safely load a single plugin with comprehensive error handling.
+        Attempts to load, validate, and initialize a single plugin for a given capability using the provided entry point.
         
-        Args:
-            entry_point: Entry point object to load
-            expected_interface: Expected plugin interface class
-            capability_name: Name of the capability being loaded
-            
+        If the plugin class does not implement the expected interface, fails validation, or fails to initialize, the error is logged, the failure is recorded, and None is returned. On success, the plugin instance is returned and its metadata is stored.
+         
+        Parameters:
+            entry_point: The entry point object representing the plugin to load.
+            expected_interface (Type): The required interface or base class the plugin must implement.
+            capability_name (str): The capability under which the plugin is being loaded.
+        
         Returns:
-            Loaded and validated plugin instance, or None if loading failed
+            Optional[FloatPlugin]: The loaded and initialized plugin instance, or None if loading failed.
         """
         plugin_name = entry_point.name
         self.load_attempts += 1
@@ -233,19 +259,27 @@ class PluginManager:
             return None
     
     def get_plugins(self, capability: str) -> List[FloatPlugin]:
-        """Get all loaded plugins for a specific capability"""
+        """
+        Return all loaded plugins that provide the specified capability.
+        
+        Parameters:
+            capability (str): The capability name to query.
+        
+        Returns:
+            List[FloatPlugin]: List of plugin instances loaded for the given capability, or an empty list if none are loaded.
+        """
         return self.plugins_by_capability.get(capability, [])
     
     def get_plugin(self, capability: str, plugin_name: Optional[str] = None) -> Optional[FloatPlugin]:
         """
-        Get a specific plugin or the first available plugin for a capability.
+        Return a plugin instance for a given capability, optionally matching a specific plugin name.
         
-        Args:
-            capability: Capability name
-            plugin_name: Specific plugin name, or None for first available
-            
+        Parameters:
+        	capability (str): The capability for which to retrieve a plugin.
+        	plugin_name (Optional[str]): The name of the specific plugin to retrieve. If None, returns the first available plugin for the capability.
+        
         Returns:
-            Plugin instance or None if not found
+        	Optional[FloatPlugin]: The matching plugin instance, or None if not found.
         """
         plugins = self.get_plugins(capability)
         
@@ -263,11 +297,24 @@ class PluginManager:
         return None
     
     def has_capability(self, capability: str) -> bool:
-        """Check if any plugins are available for a capability"""
+        """
+        Return True if any plugins are loaded for the specified capability.
+        
+        Parameters:
+            capability (str): The capability name to check.
+        
+        Returns:
+            bool: True if at least one plugin is loaded for the capability, False otherwise.
+        """
         return len(self.get_plugins(capability)) > 0
     
     def get_plugin_status(self) -> Dict[str, Any]:
-        """Get comprehensive status of the plugin system"""
+        """
+        Return a detailed status report of the plugin system, including enablement, load statistics, per-capability plugin details, and failure information.
+        
+        Returns:
+            status (dict): Dictionary containing plugin system status, including whether plugins are enabled, load attempts, successful loads, success rate, loaded plugin details per capability, failed plugins, and total plugins loaded.
+        """
         status = {
             'enabled': self.enable_plugins,
             'load_attempts': self.load_attempts,
@@ -288,7 +335,11 @@ class PluginManager:
         return status
     
     def cleanup(self) -> None:
-        """Clean up all plugins and free resources"""
+        """
+        Cleans up all loaded plugins, releases resources, and clears plugin state.
+        
+        Calls the `cleanup()` method on each loaded plugin, handles any exceptions, clears all plugin references and metadata, and triggers garbage collection to free memory.
+        """
         self.logger.info("Cleaning up plugin manager...")
         
         cleanup_count = 0
@@ -311,13 +362,13 @@ class PluginManager:
     
     def reload_plugins(self, capability_filter: Optional[List[str]] = None) -> bool:
         """
-        Safely reload plugins (cleanup then load).
+        Reloads plugins by performing cleanup and then loading plugins for specified capabilities.
         
-        Args:
-            capability_filter: List of capabilities to reload, or None for all
-            
+        Parameters:
+            capability_filter (Optional[List[str]]): List of capabilities to reload, or None to reload all.
+        
         Returns:
-            True if reload succeeded
+            bool: True if at least one plugin was successfully reloaded, False otherwise.
         """
         self.logger.info("Reloading plugins...")
         
@@ -331,13 +382,17 @@ class PluginManager:
         return self.load_plugins(capability_filter)
     
     def disable_plugins(self) -> None:
-        """Disable the plugin system and cleanup all loaded plugins"""
+        """
+        Disables the plugin system and cleans up all loaded plugins.
+        """
         self.logger.info("Disabling plugin system...")
         self.enable_plugins = False
         self.cleanup()
         
     def enable_plugins(self) -> None:
-        """Re-enable the plugin system"""
+        """
+        Enables the plugin system, allowing plugins to be discovered and loaded.
+        """
         self.logger.info("Enabling plugin system...")
         self.enable_plugins = True
 
@@ -345,7 +400,9 @@ class PluginManager:
 _plugin_manager: Optional[PluginManager] = None
 
 def get_plugin_manager() -> PluginManager:
-    """Get the global plugin manager instance (lazy initialization)"""
+    """
+    Returns the global singleton instance of the plugin manager, creating it if it does not already exist.
+    """
     global _plugin_manager
     if _plugin_manager is None:
         _plugin_manager = PluginManager()
@@ -353,10 +410,13 @@ def get_plugin_manager() -> PluginManager:
 
 def initialize_plugin_system(logger: Optional[logging.Logger] = None) -> bool:
     """
-    Initialize the global plugin system.
+    Initializes the global plugin manager and loads all available plugins.
+    
+    Parameters:
+        logger (Optional[logging.Logger]): Optional logger to use for plugin system messages.
     
     Returns:
-        True if initialization succeeded
+        bool: True if the plugin system was initialized and at least one plugin loaded successfully; False otherwise.
     """
     global _plugin_manager
     try:
@@ -368,7 +428,9 @@ def initialize_plugin_system(logger: Optional[logging.Logger] = None) -> bool:
         return False
 
 def shutdown_plugin_system() -> None:
-    """Shutdown the global plugin system and cleanup resources"""
+    """
+    Shuts down the global plugin system and releases all associated resources.
+    """
     global _plugin_manager
     if _plugin_manager:
         _plugin_manager.cleanup()
