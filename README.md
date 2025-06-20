@@ -998,7 +998,7 @@ Configure webhooks for external notifications:
 - **Current Version**: 3.1.0
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
-- **Major Features**: Plugin architecture for pattern detection, git-integrated batch processing, semantic commit message parsing, floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
+- **Major Features**: Git-integrated batch processing, semantic commit message parsing, floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing, plugin architecture for pattern detection (temporarily disabled - issue #14)
 
 ### Contributing
 
