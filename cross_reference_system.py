@@ -45,7 +45,7 @@ class CrossReferenceSystem:
             
             # FLOAT patterns
             'float_id': re.compile(r'float_\d{8}_\d{6}_[a-f0-9]{8}'),
-            'conversation_id': re.compile(r'conversation[_-]?([a-zA-Z0-9_-]+)', re.IGNORECASE),
+            'conversation_id': re.compile(r'conversation[_-]([a-f0-9]{8,})', re.IGNORECASE),
             
             # Topic and concept references
             'hashtag': re.compile(r'#(\w+)'),
@@ -215,22 +215,49 @@ class CrossReferenceSystem:
     def _extract_conversation_links(self, content: str) -> List[Dict]:
         """Extract conversation-related links"""
         links = []
+        seen_urls = set()  # Deduplicate URLs
         
         # Conversation URLs
         urls = self.reference_patterns['url'].findall(content)
         for url in urls:
-            if 'claude.ai' in url or 'chatgpt.com' in url or 'chat.openai.com' in url:
-                platform = 'claude_ai' if 'claude.ai' in url else 'chatgpt'
+            # Clean URL of any whitespace/newline artifacts and trailing punctuation
+            clean_url = url.strip().replace('\n', '').replace('\t', '').replace(' ', '').rstrip(')')
+            
+            if clean_url in seen_urls:
+                continue
+                
+            if any(platform in clean_url for platform in ['claude.ai', 'chatgpt.com', 'chat.openai.com']):
+                # Determine platform and generate better title
+                if 'claude.ai' in clean_url:
+                    platform = 'claude_ai'
+                    title = 'Claude.AI Conversation'
+                elif 'chatgpt.com' in clean_url:
+                    platform = 'chatgpt'
+                    title = 'ChatGPT Conversation'
+                elif 'chat.openai.com' in clean_url:
+                    platform = 'openai'
+                    title = 'OpenAI Chat Conversation'
+                else:
+                    platform = 'unknown'
+                    title = 'AI Conversation'
+                
+                # Extract conversation ID from URL for better titles
+                conv_id_match = re.search(r'/chat/([a-zA-Z0-9-]+)', clean_url)
+                if conv_id_match:
+                    conv_id = conv_id_match.group(1)[:8]  # First 8 chars
+                    title += f" ({conv_id})"
+                
                 links.append({
                     'type': 'conversation_url',
-                    'url': url,
+                    'url': clean_url,
                     'platform': platform,
-                    'title': f"{platform.title()} Conversation"
+                    'title': title
                 })
+                seen_urls.add(clean_url)
         
-        # Conversation ID references
-        conv_ids = self.reference_patterns['conversation_id'].findall(content)
-        for conv_id in conv_ids:
+        # Conversation ID references - deduplicate
+        conv_ids = set(self.reference_patterns['conversation_id'].findall(content))
+        for conv_id in sorted(conv_ids):
             links.append({
                 'type': 'conversation_id',
                 'conversation_id': conv_id,
@@ -286,9 +313,9 @@ class CrossReferenceSystem:
         """Find temporal references (dates, time periods)"""
         temporal_links = []
         
-        # Date references
-        dates = self.reference_patterns['date_ref'].findall(content)
-        for date in dates:
+        # Date references - deduplicate using set
+        dates = set(self.reference_patterns['date_ref'].findall(content))
+        for date in sorted(dates):  # Sort for consistent ordering
             temporal_links.append({
                 'type': 'date_reference',
                 'date': date,
