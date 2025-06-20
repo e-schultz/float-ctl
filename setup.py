@@ -32,7 +32,7 @@ setup(
             # Placeholder for storage backend plugins
         ],
         'float.summarization': [
-            # Placeholder for summarization plugins
+            'ollama=plugins.ollama_summarizer:OllamaSummarizerPlugin',
         ],
     },
     python_requires=">=3.8",

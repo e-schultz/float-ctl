@@ -122,24 +122,90 @@ class EnhancedSystemIntegration:
         self._initialize_ollama_summarizer()
     
     def _initialize_ollama_summarizer(self):
-        """Initialize Ollama summarizer for enhanced content analysis"""
+        """Initialize Ollama summarizer using plugin system with fallback to legacy"""
         try:
             enable_ollama = self.config.get('enable_ollama', False) or \
                           self.daemon.config.get('enable_ollama', False)
             
-            if enable_ollama and self.daemon.components.get('summarizer'):
-                # Reuse the daemon's already-created summarizer instead of creating a new one
-                self.ollama_summarizer = self.daemon.components['summarizer']
-                self.ollama_enabled = True
-                self.logger.info("Ollama summarizer shared from daemon (avoiding duplicate connections)")
-            else:
+            if not enable_ollama:
                 self.ollama_summarizer = None
                 self.ollama_enabled = False
                 self.logger.info("Ollama summarizer disabled")
-        except Exception as e:
-            self.logger.warning(f"Ollama summarizer initialization failed: {e}")
+                return
+            
+            # Try plugin system first
+            summarizer_plugin = None
+            try:
+                from plugin_manager import get_plugin_manager
+                plugin_manager = get_plugin_manager()
+                
+                # Load plugins if not already loaded
+                if not plugin_manager.has_capability('summarization'):
+                    plugin_manager.load_plugins(['summarization'])
+                
+                # Get the summarization plugin
+                summarizer_plugin = plugin_manager.get_plugin('summarization')
+                
+                if summarizer_plugin:
+                    # Initialize with config
+                    plugin_config = {
+                        'ollama_url': self.config.get('ollama_url', 'http://localhost:11434'),
+                        'ollama_model': self.config.get('ollama_model', 'llama3.1:8b'),
+                        'ollama_chunk_model': self.config.get('ollama_chunk_model', 'llama3.1:8b'),
+                        'ollama_final_model': self.config.get('ollama_final_model', 'llama3.1:8b'),
+                        'max_chunk_size': self.config.get('max_chunk_size', 4000),
+                        'max_chunks_per_batch': self.config.get('max_chunks_per_batch', 10)
+                    }
+                    
+                    summarizer_plugin.initialize(plugin_config, self.logger.getChild('summarizer'))
+                    self.ollama_summarizer = summarizer_plugin
+                    self.ollama_enabled = True
+                    self.logger.info(f"✅ Summarizer plugin loaded: {summarizer_plugin.name} v{summarizer_plugin.version}")
+                    return
+                
+            except Exception as plugin_error:
+                self.logger.debug(f"Summarizer plugin unavailable: {plugin_error}")
+            
+            # Fallback to legacy system (daemon component)
+            if self.daemon.components.get('summarizer'):
+                self.ollama_summarizer = self.daemon.components['summarizer']
+                self.ollama_enabled = True
+                self.logger.info("🔄 Fallback to legacy Ollama summarizer from daemon")
+                return
+            
+            # Both failed - disable summarization
             self.ollama_summarizer = None
             self.ollama_enabled = False
+            self.logger.warning("⚠️ Ollama summarization disabled - no summarizer available")
+            
+        except Exception as e:
+            self.logger.error(f"Summarizer initialization failed: {e}")
+            self.ollama_summarizer = None
+            self.ollama_enabled = False
+    
+    def _get_ollama_url(self) -> str:
+        """Get Ollama URL with safe plugin/legacy interface compatibility."""
+        if hasattr(self.ollama_summarizer, 'ollama_url'):
+            # Legacy interface or plugin with direct attribute access
+            return getattr(self.ollama_summarizer, 'ollama_url', 'http://localhost:11434')
+        elif hasattr(self.ollama_summarizer, '_get_ollama_url'):
+            # Plugin with safe wrapper method
+            return self.ollama_summarizer._get_ollama_url()
+        else:
+            # Fallback to default
+            return self.config.get('ollama_url', 'http://localhost:11434')
+    
+    def _get_ollama_model(self) -> str:
+        """Get Ollama model with safe plugin/legacy interface compatibility."""
+        if hasattr(self.ollama_summarizer, 'model'):
+            # Legacy interface or plugin with direct attribute access
+            return getattr(self.ollama_summarizer, 'model', 'llama3.1:8b')
+        elif hasattr(self.ollama_summarizer, '_get_ollama_model'):
+            # Plugin with safe wrapper method
+            return self.ollama_summarizer._get_ollama_model()
+        else:
+            # Fallback to default
+            return self.config.get('ollama_model', 'llama3.1:8b')
     
     def _initialize_cross_reference_system(self):
         """
@@ -834,9 +900,9 @@ Respond in JSON format:
             # Use Ollama to generate analysis
             import requests
             response = requests.post(
-                f"{self.ollama_summarizer.ollama_url}/api/generate",
+                f"{self._get_ollama_url()}/api/generate",
                 json={
-                    "model": self.ollama_summarizer.model,
+                    "model": self._get_ollama_model(),
                     "prompt": prompt,
                     "stream": False,
                     "options": {
