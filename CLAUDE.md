@@ -294,6 +294,248 @@ git rebase main
 # refactor: code improvements without functionality changes
 ```
 
+### Branch & Pull Request Workflow
+
+FLOAT uses a branch-based development workflow with automated code reviews via CodeRabbit. This ensures code quality while maintaining rapid development velocity.
+
+#### Creating Feature Branches
+```bash
+# Create feature branch from main
+git checkout main
+git pull origin main
+git checkout -b feature/plugin-system-foundation
+
+# Or for bug fixes
+git checkout -b fix/memory-leak-in-component-init
+
+# Or for cleanup work
+git checkout -b cleanup/remove-deprecated-functions
+```
+
+#### Development Process
+```bash
+# Make focused commits as you develop
+git add enhanced_pattern_detector.py
+git commit -m "feat: add plugin interface for pattern detection
+
+- Create abstract base class for pattern detector plugins
+- Add entry points configuration in setup.py
+- Maintain backward compatibility with existing detector
+
+Addresses #14 - Plugin system foundation"
+
+# Push to remote when ready for review
+git push origin feature/plugin-system-foundation
+```
+
+#### Creating Pull Requests
+```bash
+# Create PR using GitHub CLI (recommended)
+gh pr create --title "feat: implement plugin system foundation" --body "$(cat <<'EOF'
+## Summary
+- Implement memory-safe plugin architecture foundation
+- Convert pattern detector to first plugin implementation
+- Add comprehensive testing for plugin loading
+
+## Technical Changes
+- Abstract base classes for plugin interfaces
+- Entry points-based plugin discovery (no importlib)
+- Defensive loading with proper error handling
+- Backward compatibility maintained
+
+## Testing
+- [x] Plugin loading tests
+- [x] Fallback behavior verification
+- [x] Memory safety validation
+- [x] Integration tests pass
+
+## Related Issues
+- Closes #14 - Plugin system refactoring
+- References #13 - Original segfault investigation
+
+🤖 Generated with Claude Code
+EOF
+)"
+
+# Or create via web interface at https://github.com/user/repo/compare
+```
+
+#### Pull Request Best Practices
+
+**PR Title Format:**
+```
+type(scope): description
+
+Examples:
+feat: implement plugin system foundation
+fix(daemon): resolve memory leak in component initialization  
+docs: update README with plugin configuration
+test: add integration tests for pattern detection
+refactor(storage): simplify tripartite routing logic
+```
+
+**PR Description Template:**
+```markdown
+## Summary
+- Brief bullet points of what changed
+- Focus on "what" not "how"
+
+## Technical Changes
+- Specific technical details
+- Architecture decisions
+- Breaking changes (if any)
+
+## Testing
+- [ ] Unit tests added/updated
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+- [ ] Performance impact assessed
+
+## Related Issues
+- Closes #XX - Description
+- References #YY - Related work
+
+🤖 Generated with Claude Code
+```
+
+#### CodeRabbit Integration
+
+CodeRabbit automatically reviews all PRs and provides:
+
+**Automated Analysis:**
+- Code quality assessment
+- Security vulnerability scanning
+- Best practice recommendations
+- Documentation completeness checks
+
+**Handling CodeRabbit Feedback:**
+```bash
+# CodeRabbit will comment on PR with suggestions
+# Address major issues immediately, nitpicks can be follow-up
+
+# For critical feedback - fix before merging
+git add fixed_file.py
+git commit -m "fix: address CodeRabbit security concern
+
+- Sanitize user input in plugin loading
+- Add bounds checking for array access
+- Addresses CodeRabbit feedback on PR #XX"
+
+git push origin feature/plugin-system-foundation
+
+# For minor nitpicks - can address in follow-up PR
+# CodeRabbit provides "committable suggestions" you can apply directly
+```
+
+#### Merging Strategy
+
+**Pre-merge Checklist:**
+```bash
+# 1. Ensure CI passes (if configured)
+gh pr checks
+
+# 2. Address any CodeRabbit critical feedback
+# 3. Rebase if needed to maintain clean history
+git checkout main
+git pull origin main  
+git checkout feature/plugin-system-foundation
+git rebase main
+
+# 4. Push rebased branch
+git push origin feature/plugin-system-foundation --force-with-lease
+
+# 5. Merge via GitHub interface or CLI
+gh pr merge --squash  # For small features
+gh pr merge --merge   # For larger features with meaningful commit history
+```
+
+**Post-merge Cleanup:**
+```bash
+# Delete feature branch
+git checkout main
+git pull origin main
+git branch -d feature/plugin-system-foundation
+git push origin --delete feature/plugin-system-foundation
+```
+
+#### Branch Naming Conventions
+
+**Feature Development:**
+- `feature/plugin-system-foundation`
+- `feature/ollama-summarizer-plugin`
+- `feature/temporal-query-enhancement`
+
+**Bug Fixes:**
+- `fix/memory-leak-component-init`
+- `fix/segfault-plugin-loading`
+- `fix/readme-inconsistent-documentation`
+
+**Cleanup/Refactoring:**
+- `cleanup/remove-deprecated-debug-files`
+- `refactor/simplify-tripartite-routing`
+- `cleanup/plugin-system-removal-and-stability`
+
+**Documentation:**
+- `docs/update-plugin-architecture-guide`
+- `docs/add-performance-optimization-notes`
+
+#### Workflow Examples
+
+**Simple Feature Addition:**
+```bash
+git checkout -b feature/add-json-export
+# ... make changes ...
+git commit -m "feat: add JSON export for conversation analysis"
+git push origin feature/add-json-export
+gh pr create --title "feat: add JSON export functionality"
+# ... CodeRabbit reviews, make any fixes ...
+gh pr merge --squash
+```
+
+**Complex Feature with Multiple Components:**
+```bash
+git checkout -b feature/plugin-system-foundation
+# ... implement plugin base classes ...
+git commit -m "feat: add plugin interface abstractions"
+# ... implement plugin manager ...
+git commit -m "feat: add plugin discovery and loading"
+# ... convert existing component ...
+git commit -m "feat: convert pattern detector to plugin"
+# ... add tests ...
+git commit -m "test: add comprehensive plugin system tests"
+git push origin feature/plugin-system-foundation
+gh pr create --title "feat: implement memory-safe plugin system foundation"
+# ... address CodeRabbit feedback ...
+gh pr merge --merge  # Preserve commit history for complex features
+```
+
+#### Emergency Hotfixes
+
+**For critical production issues:**
+```bash
+# Create hotfix branch from main
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-segfault-fix
+
+# Make minimal fix
+git commit -m "fix: prevent segfault in plugin loader
+
+- Add null check before plugin instantiation
+- Add defensive error handling
+- Addresses critical stability issue
+
+Emergency hotfix - bypasses normal review process"
+
+# Create PR marked as hotfix
+gh pr create --title "🚨 HOTFIX: prevent segfault in plugin loader" \
+             --label "hotfix" \
+             --body "Critical stability fix - requires immediate merge"
+
+# Fast-track merge
+gh pr merge --squash
+```
+
 ### GitHub Issue Workflow
 
 The FLOAT project uses GitHub issues to track improvements, bugs, and architecture decisions. This maintains development history and provides linkable references for daily logs and archaeological findings.
