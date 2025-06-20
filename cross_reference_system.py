@@ -286,7 +286,7 @@ class CrossReferenceSystem:
         return list(topics)
     
     def _extract_signal_references(self, content: str) -> List[Dict]:
-        """Extract FLOAT signal references (ctx::, highlight::)"""
+        """Extract FLOAT signal references (ctx::, highlight::, and enhanced patterns)"""
         signals = []
         
         # Context signals
@@ -305,6 +305,48 @@ class CrossReferenceSystem:
                 'type': 'highlight_signal',
                 'content': match.strip(),
                 'importance': 'highlight'
+            })
+        
+        # Enhanced patterns - Issue #3: Inline patterns
+        inline_expand_on = re.findall(r'\[expandOn::\s*([^\]]+)\]', content, re.IGNORECASE)
+        for match in inline_expand_on:
+            signals.append({
+                'type': 'inline_expand_on',
+                'content': match.strip(),
+                'importance': 'expansion'
+            })
+        
+        inline_relates_to = re.findall(r'\[relatesTo::\s*([^\]]+)\]', content, re.IGNORECASE)
+        for match in inline_relates_to:
+            signals.append({
+                'type': 'inline_relates_to', 
+                'content': match.strip(),
+                'importance': 'connection'
+            })
+        
+        # Enhanced patterns - Issue #3: Line-level patterns (allow indentation and bullets)
+        line_mood = re.findall(r'^\s*[-*]?\s*mood::\s*(.+)$', content, re.MULTILINE | re.IGNORECASE)
+        for match in line_mood:
+            signals.append({
+                'type': 'mood',
+                'content': match.strip(),
+                'importance': 'context'
+            })
+        
+        line_boundary = re.findall(r'^\s*[-*]?\s*boundary::\s*(.+)$', content, re.MULTILINE | re.IGNORECASE)
+        for match in line_boundary:
+            signals.append({
+                'type': 'boundary',
+                'content': match.strip(), 
+                'importance': 'reflection'
+            })
+        
+        line_progress = re.findall(r'^\s*[-*]?\s*progress::\s*(.+)$', content, re.MULTILINE | re.IGNORECASE)
+        for match in line_progress:
+            signals.append({
+                'type': 'progress',
+                'content': match.strip(),
+                'importance': 'tracking'
             })
         
         return signals

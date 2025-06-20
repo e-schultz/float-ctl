@@ -40,6 +40,24 @@ class EnhancedFloatPatternDetector:
             'echo_copy': re.compile(r'echoCopy::\s*([^\n]*?)(?:\s*::|$)', re.IGNORECASE),
             'mood_markers': re.compile(r'\[mood::\s*([^\]]*)\]', re.IGNORECASE),
             
+            # Inline patterns (bracketed format) - Issue #3
+            'inline_expand_on': re.compile(r'\[expandOn::\s*([^\]]+)\]', re.IGNORECASE),
+            'inline_relates_to': re.compile(r'\[relatesTo::\s*([^\]]+)\]', re.IGNORECASE),
+            'inline_connect_to': re.compile(r'\[connectTo::\s*([^\]]+)\]', re.IGNORECASE),
+            'inline_remember_when': re.compile(r'\[rememberWhen::\s*([^\]]+)\]', re.IGNORECASE),
+            'inline_generic': re.compile(r'\[([a-zA-Z][a-zA-Z0-9]*)::\s*([^\]]+)\]'),
+            
+            # Line-level :: patterns - Issue #3 (allow indentation and bullet points)
+            'line_mood': re.compile(r'^\s*[-*]?\s*mood::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_soundtrack': re.compile(r'^\s*[-*]?\s*soundtrack::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_body_check': re.compile(r'^\s*[-*]?\s*bodyCheck::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_impact': re.compile(r'^\s*[-*]?\s*impact::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_boundary': re.compile(r'^\s*[-*]?\s*boundary::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_progress': re.compile(r'^\s*[-*]?\s*progress::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_completed': re.compile(r'^\s*[-*]?\s*completed::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_issue': re.compile(r'^\s*[-*]?\s*issue::\s*(.+)$', re.MULTILINE | re.IGNORECASE),
+            'line_generic': re.compile(r'^\s*[-*]?\s*([a-zA-Z][a-zA-Z0-9]*)::\s*(.+)$', re.MULTILINE),
+            
             # Persona annotation system (from tripartite chunker)
             'persona_annotations': re.compile(r'\[([^:]+)::[^\]]+\]'),
             'any_combo': re.compile(r'\[any::[^\]]+\]', re.IGNORECASE),
@@ -229,7 +247,14 @@ class EnhancedFloatPatternDetector:
         
         extended_pattern_names = [
             'expand_on', 'relates_to', 'remember_when', 'story_time', 
-            'echo_copy', 'mood_markers'
+            'echo_copy', 'mood_markers',
+            # New inline patterns - Issue #3
+            'inline_expand_on', 'inline_relates_to', 'inline_connect_to', 
+            'inline_remember_when', 'inline_generic',
+            # New line-level patterns - Issue #3
+            'line_mood', 'line_soundtrack', 'line_body_check', 'line_impact',
+            'line_boundary', 'line_progress', 'line_completed', 'line_issue',
+            'line_generic'
         ]
         
         for pattern_name in extended_pattern_names:
