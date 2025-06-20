@@ -53,29 +53,62 @@ class EnhancedSystemIntegration:
     
     def _initialize_enhanced_pattern_detector(self):
         """
-        Initializes the enhanced pattern detector for advanced content analysis.
+        Initialize the enhanced pattern detector, preferring a plugin-based implementation with a legacy fallback.
         
-        Attempts to import and instantiate the enhanced pattern detector with memory management and a brief delay to ensure resource availability. If initialization fails, disables enhanced pattern detection.
+        Attempts to load a pattern detector plugin via the plugin manager. If unavailable, falls back to the legacy enhanced pattern detector. Disables pattern detection if both methods fail, logging the outcome at each step.
         """
         try:
             import gc
-            from enhanced_pattern_detector import EnhancedFloatPatternDetector
+            import time
             
             # Add a small delay to allow any previous operations to complete
-            import time
             time.sleep(0.1)
-            
-            # Force garbage collection before creating the detector
             gc.collect()
             
-            self.pattern_detector = EnhancedFloatPatternDetector()
-            self.logger.info("Enhanced pattern detector initialized")
+            # Try plugin system first
+            pattern_detector_plugin = None
+            try:
+                from plugin_manager import get_plugin_manager
+                plugin_manager = get_plugin_manager()
+                
+                # Load plugins if not already loaded
+                if not plugin_manager.has_capability('pattern_detection'):
+                    plugin_manager.load_plugins(['pattern_detection'])
+                
+                # Get the pattern detection plugin
+                pattern_detector_plugin = plugin_manager.get_plugin('pattern_detection')
+                
+                if pattern_detector_plugin:
+                    self.pattern_detector = pattern_detector_plugin
+                    self.logger.info(f"✅ Pattern detector plugin loaded: {pattern_detector_plugin.name} v{pattern_detector_plugin.version}")
+                    return
+                
+            except Exception as plugin_error:
+                self.logger.debug(f"Plugin system unavailable: {plugin_error}")
+            
+            # Fallback to legacy enhanced pattern detector
+            try:
+                from enhanced_pattern_detector import EnhancedFloatPatternDetector
+                self.pattern_detector = EnhancedFloatPatternDetector(logger=self.logger)
+                self.logger.info("🔄 Fallback to legacy enhanced pattern detector")
+                return
+            except Exception as legacy_error:
+                self.logger.warning(f"Legacy pattern detector failed: {legacy_error}")
+            
+            # Both failed - disable pattern detection
+            self.pattern_detector = None
+            self.logger.warning("⚠️ Pattern detection disabled - no detector available")
+            
         except Exception as e:
-            self.logger.warning(f"Enhanced pattern detector not available: {e}")
+            self.logger.error(f"Pattern detector initialization failed: {e}")
             self.pattern_detector = None
     
     def _initialize_enhanced_context(self):
-        """Initialize enhanced daily context if available"""
+        """
+        Initializes enhanced daily context integration if supported by the daemon's context component.
+        
+        Enables enhanced daily summary features when available and initializes the Ollama summarizer if configured.
+        """
         try:
             if hasattr(self.daemon.components.get('context'), 'create_comprehensive_daily_summary_enhanced'):
                 self.enhanced_context = self.daemon.components['context']
@@ -238,7 +271,17 @@ class EnhancedSystemIntegration:
         return result
     
     def _perform_enhanced_analysis(self, file_analysis: Dict) -> Dict:
-        """Perform enhanced content analysis using sophisticated pattern detection"""
+        """
+        Performs advanced content analysis on a file using enhanced pattern detection, extracting metadata, structure, and actionable insights.
+        
+        This method analyzes the provided file content using either a plugin-based or legacy pattern detector, if available, to extract detailed information such as signal density, content complexity, actionable insights, platform and persona analysis, cross-reference potential, document structure, and FLOAT-specific patterns. It classifies the content type, detects conversation metadata if applicable, extracts topics, determines tripartite routing, and performs additional analysis for daily logs. Falls back to a basic analysis if no pattern detector is available.
+        
+        Parameters:
+            file_analysis (Dict): Dictionary containing file content, metadata, and any preliminary analysis.
+        
+        Returns:
+            Dict: A dictionary with enriched analysis results, including classification, metadata, routing, and extracted insights.
+        """
         content = file_analysis.get('content', '')
         metadata = file_analysis.get('metadata', {})
         basic_analysis = file_analysis.get('analysis', {})
@@ -259,9 +302,9 @@ class EnhancedSystemIntegration:
         if not content:
             return enhanced
         
-        # Enhanced pattern detection using tripartite chunker patterns
+        # Enhanced pattern detection using plugin system or legacy detector
         if self.pattern_detector:
-            pattern_analysis = self.pattern_detector.extract_comprehensive_patterns(content, file_path)
+            pattern_analysis = self._analyze_patterns_safe(content, file_path)
             enhanced['pattern_analysis'] = pattern_analysis
             
             # Use tripartite classification
@@ -278,11 +321,11 @@ class EnhancedSystemIntegration:
             enhanced['has_high_signal_density'] = signal_analysis.get('has_high_signal_density', False)
             
             # Content complexity assessment
-            enhanced['content_complexity'] = self.pattern_detector.get_content_complexity_assessment(pattern_analysis)
-            enhanced['is_high_priority'] = self.pattern_detector.is_high_priority_content(pattern_analysis)
+            enhanced['content_complexity'] = self._get_content_complexity_safe(pattern_analysis)
+            enhanced['is_high_priority'] = self._is_high_priority_content_safe(pattern_analysis)
             
             # Actionable insights
-            enhanced['actionable_insights'] = self.pattern_detector.extract_actionable_insights(pattern_analysis)
+            enhanced['actionable_insights'] = self._extract_actionable_insights_safe(pattern_analysis)
             
             # Platform integration analysis
             platform_analysis = pattern_analysis.get('platform_integration', {})
@@ -360,7 +403,12 @@ class EnhancedSystemIntegration:
         return enhanced
     
     def _perform_basic_enhanced_analysis(self, content: str, metadata: Dict, basic_analysis: Dict) -> Dict:
-        """Fallback basic analysis when enhanced pattern detector is not available"""
+        """
+        Provide a simplified enhanced analysis of content when no advanced pattern detector is available.
+        
+        Performs basic calculations for signal density and populates default values for enhanced analysis fields, using counts from the provided basic analysis.
+        Returns a dictionary with standard enhanced analysis keys and fallback values.
+        """
         enhanced = {
             'tripartite_domain': 'concept',
             'tripartite_confidence': 0.5,
@@ -408,8 +456,123 @@ class EnhancedSystemIntegration:
         
         return enhanced
     
+    def _analyze_patterns_safe(self, content: str, file_path: Optional[Path] = None) -> Dict:
+        """
+        Analyzes content patterns using the available pattern detector, supporting both plugin and legacy interfaces.
+        
+        Attempts to use the plugin's `detect_patterns` method if available, falling back to the legacy `extract_comprehensive_patterns` method. Returns an empty dictionary if analysis fails or the interface is unrecognized.
+        
+        Parameters:
+            content (str): The content to analyze for patterns.
+            file_path (Optional[Path]): Optional file path for context during analysis.
+        
+        Returns:
+            Dict: Pattern analysis results, or an empty dictionary if analysis is unsuccessful.
+        """
+        try:
+            # Check if this is a plugin (has detect_patterns method)
+            if hasattr(self.pattern_detector, 'detect_patterns'):
+                result = self.pattern_detector.detect_patterns(content, file_path)
+                # Plugin interface returns analysis_results nested
+                return result.get('analysis_results', result)
+            
+            # Legacy interface
+            elif hasattr(self.pattern_detector, 'extract_comprehensive_patterns'):
+                return self.pattern_detector.extract_comprehensive_patterns(content, file_path)
+            
+            else:
+                self.logger.warning("Pattern detector has unknown interface")
+                return {}
+                
+        except Exception as e:
+            self.logger.error(f"Pattern analysis failed: {e}")
+            return {}
+    
+    def _get_content_complexity_safe(self, pattern_analysis: Dict) -> str:
+        """
+        Returns a content complexity rating ('low', 'medium', or 'high') based on pattern analysis, using the pattern detector if available or fallback heuristics otherwise.
+        
+        If the pattern detector provides a complexity assessment method, it is used; otherwise, the method estimates complexity from word and signal counts. Returns 'medium' if an error occurs.
+        """
+        try:
+            if hasattr(self.pattern_detector, 'get_content_complexity_assessment'):
+                return self.pattern_detector.get_content_complexity_assessment(pattern_analysis)
+            else:
+                # Fallback complexity assessment
+                word_count = pattern_analysis.get('word_count', 0)
+                signal_count = pattern_analysis.get('signal_analysis', {}).get('total_signals', 0)
+                
+                if word_count > 2000 or signal_count > 10:
+                    return 'high'
+                elif word_count > 500 or signal_count > 3:
+                    return 'medium'
+                else:
+                    return 'low'
+        except Exception as e:
+            self.logger.error(f"Content complexity assessment failed: {e}")
+            return 'medium'
+    
+    def _is_high_priority_content_safe(self, pattern_analysis: Dict) -> bool:
+        """
+        Determine if the analyzed content is high priority, using the pattern detector if available or fallback heuristics.
+        
+        Returns:
+            bool: True if the content is considered high priority; otherwise, False.
+        """
+        try:
+            if hasattr(self.pattern_detector, 'is_high_priority_content'):
+                return self.pattern_detector.is_high_priority_content(pattern_analysis)
+            else:
+                # Fallback priority assessment
+                signal_analysis = pattern_analysis.get('signal_analysis', {})
+                return signal_analysis.get('has_high_signal_density', False)
+        except Exception as e:
+            self.logger.error(f"High priority assessment failed: {e}")
+            return False
+    
+    def _extract_actionable_insights_safe(self, pattern_analysis: Dict) -> List[Dict]:
+        """
+        Extracts actionable insights from pattern analysis results using the available pattern detector interface, with a fallback to basic extraction from document structure if necessary.
+        
+        Returns:
+            A list of dictionaries representing actionable insights, or an empty list if extraction fails.
+        """
+        try:
+            if hasattr(self.pattern_detector, 'extract_actionable_insights'):
+                return self.pattern_detector.extract_actionable_insights(pattern_analysis)
+            else:
+                # Fallback insights extraction
+                insights = []
+                
+                # Extract action items from document structure
+                structure = pattern_analysis.get('document_structure', {})
+                action_items = structure.get('action_items', {}).get('items', [])
+                for item in action_items[:3]:
+                    insights.append({
+                        'type': 'action_item',
+                        'priority': 'medium',
+                        'content': item,
+                        'source': 'fallback_analysis'
+                    })
+                
+                return insights
+        except Exception as e:
+            self.logger.error(f"Actionable insights extraction failed: {e}")
+            return []
+    
     def is_daily_log(self, content: str, metadata: Dict) -> bool:
-        """Check if content is a daily log rather than a conversation"""
+        """
+        Determine whether the provided content represents a daily log entry.
+        
+        Checks for daily log indicators in frontmatter, filename patterns, content markers, structural cues, and navigation patterns to distinguish daily logs from conversations or other document types.
+        
+        Parameters:
+            content (str): The content to analyze.
+            metadata (Dict): Metadata associated with the content, such as filename.
+        
+        Returns:
+            bool: True if the content is identified as a daily log, False otherwise.
+        """
         
         # Priority 1: Check frontmatter for definitive daily log indicators
         if content.startswith('---'):
