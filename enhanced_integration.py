@@ -52,7 +52,11 @@ class EnhancedSystemIntegration:
         self._initialize_conversation_patterns()
     
     def _initialize_enhanced_pattern_detector(self):
-        """Initialize enhanced pattern detector from tripartite chunker"""
+        """
+        Initializes the enhanced pattern detector for advanced content analysis.
+        
+        Attempts to import and instantiate the enhanced pattern detector with memory management and a brief delay to ensure resource availability. If initialization fails, disables enhanced pattern detection.
+        """
         try:
             import gc
             from enhanced_pattern_detector import EnhancedFloatPatternDetector
@@ -105,7 +109,11 @@ class EnhancedSystemIntegration:
             self.ollama_enabled = False
     
     def _initialize_cross_reference_system(self):
-        """Initialize cross-reference system"""
+        """
+        Initializes the cross-reference system for enhanced content linking and metadata enrichment.
+        
+        Attempts to instantiate the CrossReferenceSystem using the current vault path, Chroma client, and configuration. If initialization fails, disables cross-reference functionality.
+        """
         try:
             import gc
             import time
@@ -128,7 +136,11 @@ class EnhancedSystemIntegration:
             self.cross_ref_system = None
     
     def _initialize_conversation_dis_system(self):
-        """Initialize enhanced conversation dis generation system"""
+        """
+        Initializes the enhanced conversation `.dis` generation system and the streamlined `.dis` generator.
+        
+        Attempts to instantiate both the enhanced and streamlined `.dis` generators with memory management precautions. If initialization fails, the corresponding generator is set to None.
+        """
         try:
             import gc
             import time
