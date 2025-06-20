@@ -184,7 +184,12 @@ class OllamaFloatSummarizer:
         return [chunk for chunk in chunks if len(chunk.strip()) > 50]
     
     def _chunk_semantic_content(self, content: str) -> List[str]:
-        """Fallback semantic chunking on sentence boundaries."""
+        """
+        Splits content into semantic chunks based on sentence boundaries, ensuring each chunk does not exceed the maximum chunk size.
+        
+        Returns:
+            List of content chunks, each containing multiple sentences and exceeding a minimum length threshold.
+        """
         
         # Split into sentences (simple approach)
         sentences = re.split(r'[.!?]+\s+', content)
@@ -204,23 +209,48 @@ class OllamaFloatSummarizer:
         return [chunk for chunk in chunks if len(chunk.strip()) > 30]
     
     def generate_chunk_summary(self, chunk: str, chunk_index: int, 
-                             total_chunks: int, file_metadata: Dict) -> Dict:
+                             total_chunks: int, file_metadata: Dict,
+                             processing_hints: str = None, batch_context: Dict = None) -> Dict:
         """
-        Generate summary for a single chunk using Ollama.
-        """
+                             Generate a structured summary for a single content chunk using the Ollama API, with optional contextual hints and batch processing metadata.
+                             
+                             Parameters:
+                                 chunk (str): The content chunk to be summarized.
+                                 chunk_index (int): The index of the current chunk within the total set.
+                                 total_chunks (int): The total number of chunks for the document.
+                                 file_metadata (Dict): Metadata about the file containing the chunk.
+                                 processing_hints (str, optional): Additional instructions or focus areas for the summarization prompt.
+                                 batch_context (Dict, optional): Metadata about the batch processing context, such as file index, domain, or bundle type.
+                             
+                             Returns:
+                                 Dict: A dictionary containing the generated summary, chunk index, model used, success status, chunk size, and generation timestamp. If the Ollama API call fails, returns a fallback summary.
+                             """
         
-        system_prompt = """You are a FLOAT-aware content analyst. Your task is to summarize chunks of documents for knowledge management.
+        # Build dynamic system prompt based on hints
+        base_system_prompt = """You are a FLOAT-aware content analyst. Your task is to summarize chunks of documents for knowledge management.
 
 Focus on:
 1. Key topics and themes
 2. FLOAT patterns (ctx::, highlight::, float.dispatch, ritual language)
 3. Technical vs philosophical vs experiential content
 4. Important decisions, insights, or outcomes
-5. Cross-references and connections
+5. Cross-references and connections"""
 
-Keep summaries concise but informative. Preserve important context for later synthesis."""
+        # Add processing hints if provided
+        if processing_hints:
+            system_prompt = f"{base_system_prompt}\n\nAdditionally, please focus on: {processing_hints}"
+        else:
+            system_prompt = f"{base_system_prompt}\n\nKeep summaries concise but informative. Preserve important context for later synthesis."
 
-        user_prompt = f"""Summarize this chunk ({chunk_index + 1} of {total_chunks}) from file: {file_metadata.get('filename', 'unknown')}
+        # Build user prompt with batch context
+        if batch_context:
+            batch_info = f"""
+This is file {batch_context.get('current_file_index', 0) + 1} of {batch_context.get('total_files', 1)} in a batch about: {batch_context.get('domain', 'unknown domain')}
+Bundle type: {batch_context.get('type', 'mixed')}, Bundle approach: {batch_context.get('bundle', 'merge')}"""
+        else:
+            batch_info = ""
+        
+        user_prompt = f"""Summarize this chunk ({chunk_index + 1} of {total_chunks}) from file: {file_metadata.get('filename', 'unknown')}{batch_info}
 
 CHUNK CONTENT:
 {chunk}
@@ -231,6 +261,7 @@ Provide a structured summary covering:
 - Key insights or decisions
 - Content type (technical/philosophical/experiential)
 - Notable quotes or concepts (if any)
+{f"- Aspects related to: {processing_hints}" if processing_hints else ""}
 
 Summary:"""
 
@@ -271,7 +302,14 @@ Summary:"""
             return self._fallback_chunk_summary(chunk, chunk_index)
     
     def _fallback_chunk_summary(self, chunk: str, chunk_index: int) -> Dict:
-        """Fallback summary generation when Ollama is unavailable."""
+        """
+        Generate a basic summary for a content chunk when Ollama API is unavailable.
+        
+        The summary includes the first meaningful line as a topic, counts of lines and words, and detection of FLOAT-specific patterns such as 'ctx::', 'highlight::', and 'float.dispatch'. Returns a dictionary with summary details and fallback metadata.
+        
+        Returns:
+            dict: Contains the chunk index, generated summary, model identifier, success flag, chunk size, and timestamp.
+        """
         
         lines = chunk.split('\n')
         words = chunk.split()
@@ -307,10 +345,21 @@ Summary:"""
         }
     
     def synthesize_final_summary(self, chunk_summaries: List[Dict], 
-                               file_metadata: Dict, content_analysis: Dict) -> Dict:
+                               file_metadata: Dict, content_analysis: Dict,
+                               processing_hints: str = None, batch_context: Dict = None) -> Dict:
         """
-        Synthesize chunk summaries into a final comprehensive summary.
-        """
+                               Synthesizes multiple chunk summaries into a comprehensive final summary using the Ollama API, incorporating FLOAT pattern analysis, file metadata, content analysis, and optional contextual hints.
+                               
+                               Parameters:
+                                   chunk_summaries (List[Dict]): Summaries of individual content chunks to be synthesized.
+                                   file_metadata (Dict): Metadata about the file being summarized.
+                                   content_analysis (Dict): Analysis results describing content type and detected FLOAT patterns.
+                                   processing_hints (str, optional): Additional instructions or focus areas to guide summary synthesis.
+                                   batch_context (Dict, optional): Information about the batch processing context, such as file index and domain.
+                               
+                               Returns:
+                                   Dict: A dictionary containing the synthesized summary, model used, synthesis method, chunk count, success status, generation timestamp, and the original chunk summaries. Falls back to a rule-based summary if the Ollama API call fails.
+                               """
         
         if not chunk_summaries:
             return self._fallback_final_summary(file_metadata, content_analysis)
@@ -321,7 +370,8 @@ Summary:"""
             for summary in chunk_summaries
         ])
         
-        system_prompt = """You are synthesizing chunk summaries into a comprehensive document summary for FLOAT knowledge management.
+        # Build system prompt with processing hints
+        base_system_prompt = """You are synthesizing chunk summaries into a comprehensive document summary for FLOAT knowledge management.
 
 Create a coherent overview that:
 1. Identifies overarching themes and topics
@@ -329,15 +379,27 @@ Create a coherent overview that:
 3. Captures key insights, decisions, or outcomes
 4. Describes the content type and structure
 5. Notes connections and cross-references
-6. Assesses the document's knowledge value
+6. Assesses the document's knowledge value"""
 
-Be concise but comprehensive. Focus on what makes this document valuable for future reference."""
+        if processing_hints:
+            system_prompt = f"{base_system_prompt}\n\nSpecial focus required on: {processing_hints}\n\nBe concise but comprehensive. Focus on what makes this document valuable for future reference, especially regarding the specified focus areas."
+        else:
+            system_prompt = f"{base_system_prompt}\n\nBe concise but comprehensive. Focus on what makes this document valuable for future reference."
 
+        # Build user prompt with batch context
+        batch_info = ""
+        if batch_context:
+            batch_info = f"""
+BATCH CONTEXT: File {batch_context.get('current_file_index', 0) + 1} of {batch_context.get('total_files', 1)}
+Domain: {batch_context.get('domain', 'unknown')}
+Bundle approach: {batch_context.get('bundle', 'individual')}
+"""
+        
         user_prompt = f"""Synthesize these chunk summaries into a comprehensive document summary:
 
 DOCUMENT: {file_metadata.get('filename', 'Unknown')}
 TYPE: {content_analysis.get('content_type', 'Unknown')}
-SIZE: {len(chunk_summaries)} chunks, {sum(s['chunk_size'] for s in chunk_summaries):,} characters
+SIZE: {len(chunk_summaries)} chunks, {sum(s['chunk_size'] for s in chunk_summaries):,} characters{batch_info}
 
 CHUNK SUMMARIES:
 {summaries_text}
@@ -348,7 +410,7 @@ FLOAT PATTERNS DETECTED:
 - float.dispatch: {'Yes' if content_analysis.get('has_float_dispatch') else 'No'}
 - conversation links: {'Yes' if content_analysis.get('has_conversation_links') else 'No'}
 
-Create a comprehensive summary that synthesizes the key themes, insights, and value of this document:"""
+Create a comprehensive summary that synthesizes the key themes, insights, and value of this document{f', with special attention to: {processing_hints}' if processing_hints else ''}:"""
 
         try:
             response = requests.post(
@@ -389,7 +451,19 @@ Create a comprehensive summary that synthesizes the key themes, insights, and va
     
     def _fallback_final_summary(self, file_metadata: Dict, content_analysis: Dict, 
                               chunk_summaries: List[Dict] = None) -> Dict:
-        """Fallback final summary when Ollama synthesis fails."""
+        """
+                              Generate a rule-based final summary when Ollama synthesis is unavailable.
+                              
+                              The summary includes file metadata, content type, word count, detected FLOAT patterns, and, if available, information about chunk processing and key themes from chunk summaries.
+                              
+                              Parameters:
+                                  file_metadata (Dict): Metadata about the file being summarized.
+                                  content_analysis (Dict): Analysis results describing the content.
+                                  chunk_summaries (List[Dict], optional): Summaries of individual content chunks.
+                              
+                              Returns:
+                                  Dict: A dictionary containing the fallback summary, synthesis metadata, and chunk summaries.
+                              """
         
         # Extract key information
         filename = file_metadata.get('filename', 'Unknown file')
@@ -438,11 +512,23 @@ Create a comprehensive summary that synthesizes the key themes, insights, and va
         }
     
     def generate_comprehensive_summary(self, content: str, file_metadata: Dict, 
-                                     content_analysis: Dict) -> Dict:
+                                     content_analysis: Dict, processing_hints: str = None,
+                                     batch_context: Dict = None) -> Dict:
         """
-        Main entry point for comprehensive summary generation.
-        Handles both single-chunk and multi-chunk documents.
-        """
+                                     Generates a comprehensive summary of the provided content using hierarchical chunking and Ollama-based summarization.
+                                     
+                                     This method splits the content into intelligently sized chunks based on its structure, generates summaries for each chunk (with optional processing hints and batch context), and synthesizes a final summary. It supports both single-chunk and multi-chunk documents, automatically selecting the appropriate summarization strategy. The result includes summary details, model information, and processing metadata.
+                                     
+                                     Parameters:
+                                         content (str): The document content to be summarized.
+                                         file_metadata (Dict): Metadata about the file, such as filename and properties.
+                                         content_analysis (Dict): Results from prior content analysis, used to inform summarization.
+                                         processing_hints (str, optional): Additional hints to guide summarization, such as context from version control or user input.
+                                         batch_context (Dict, optional): Contextual information about the batch processing environment, such as file index or domain.
+                                     
+                                     Returns:
+                                         Dict: A dictionary containing the final summary, chunk summaries, model details, synthesis method, and processing statistics.
+                                     """
         
         print(f"🤖 Generating Ollama summary for {file_metadata.get('filename', 'unknown')}")
         
@@ -456,7 +542,11 @@ Create a comprehensive summary that synthesizes the key themes, insights, and va
         if len(chunks) == 1:
             # Single chunk - direct summarization
             print(f"   Processing single chunk ({len(content):,} chars)")
-            chunk_summary = self.generate_chunk_summary(chunks[0], 0, 1, file_metadata)
+            chunk_summary = self.generate_chunk_summary(
+                chunks[0], 0, 1, file_metadata, 
+                processing_hints=processing_hints,
+                batch_context=batch_context
+            )
             chunk_summaries.append(chunk_summary)
             
             # For single chunks, the chunk summary IS the final summary
@@ -476,12 +566,20 @@ Create a comprehensive summary that synthesizes the key themes, insights, and va
             
             for i, chunk in enumerate(chunks):
                 print(f"     Chunk {i+1}/{len(chunks)} ({len(chunk):,} chars)")
-                chunk_summary = self.generate_chunk_summary(chunk, i, len(chunks), file_metadata)
+                chunk_summary = self.generate_chunk_summary(
+                    chunk, i, len(chunks), file_metadata,
+                    processing_hints=processing_hints,
+                    batch_context=batch_context
+                )
                 chunk_summaries.append(chunk_summary)
             
             # Step 3: Synthesize final summary
             print(f"   Synthesizing final summary from {len(chunk_summaries)} chunk summaries")
-            final_summary = self.synthesize_final_summary(chunk_summaries, file_metadata, content_analysis)
+            final_summary = self.synthesize_final_summary(
+                chunk_summaries, file_metadata, content_analysis,
+                processing_hints=processing_hints,
+                batch_context=batch_context
+            )
         
         # Step 4: Add processing metadata
         final_summary.update({

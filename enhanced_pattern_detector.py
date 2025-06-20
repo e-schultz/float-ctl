@@ -12,13 +12,11 @@ from typing import Dict, List, Tuple, Optional, Set
 from pathlib import Path
 from datetime import datetime
 
-# Plugin system integration - Issue #5
-try:
-    from pattern_plugin_interface import PatternPluginManager
-    PLUGIN_SYSTEM_AVAILABLE = True
-except ImportError:
-    PLUGIN_SYSTEM_AVAILABLE = False
-    print("⚠️  Plugin system not available - falling back to built-in patterns")
+# Plugin system removed for refactoring - Issue #14
+# The previous plugin implementation caused segfaults and has been removed.
+# New memory-safe plugin architecture will be implemented per GitHub issue #14.
+PLUGIN_SYSTEM_AVAILABLE = False
+print("🔧 Plugin system temporarily removed for safety refactoring (issue #14) - using built-in patterns")
 
 
 class EnhancedFloatPatternDetector:

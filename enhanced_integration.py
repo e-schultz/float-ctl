@@ -52,9 +52,22 @@ class EnhancedSystemIntegration:
         self._initialize_conversation_patterns()
     
     def _initialize_enhanced_pattern_detector(self):
-        """Initialize enhanced pattern detector from tripartite chunker"""
+        """
+        Initializes the enhanced pattern detector for advanced content analysis.
+        
+        Attempts to import and instantiate the enhanced pattern detector with memory management and a brief delay to ensure resource availability. If initialization fails, disables enhanced pattern detection.
+        """
         try:
+            import gc
             from enhanced_pattern_detector import EnhancedFloatPatternDetector
+            
+            # Add a small delay to allow any previous operations to complete
+            import time
+            time.sleep(0.1)
+            
+            # Force garbage collection before creating the detector
+            gc.collect()
+            
             self.pattern_detector = EnhancedFloatPatternDetector()
             self.logger.info("Enhanced pattern detector initialized")
         except Exception as e:
@@ -96,9 +109,20 @@ class EnhancedSystemIntegration:
             self.ollama_enabled = False
     
     def _initialize_cross_reference_system(self):
-        """Initialize cross-reference system"""
+        """
+        Initializes the cross-reference system for enhanced content linking and metadata enrichment.
+        
+        Attempts to instantiate the CrossReferenceSystem using the current vault path, Chroma client, and configuration. If initialization fails, disables cross-reference functionality.
+        """
         try:
+            import gc
+            import time
             from cross_reference_system import CrossReferenceSystem
+            
+            # Add delay and garbage collection for memory management
+            time.sleep(0.1)
+            gc.collect()
+            
             chroma_client = self.daemon.components['context'].client
             self.cross_ref_system = CrossReferenceSystem(
                 Path(self.vault_path),  # Ensure it's a Path object
@@ -112,9 +136,20 @@ class EnhancedSystemIntegration:
             self.cross_ref_system = None
     
     def _initialize_conversation_dis_system(self):
-        """Initialize enhanced conversation dis generation system"""
+        """
+        Initializes the enhanced conversation `.dis` generation system and the streamlined `.dis` generator.
+        
+        Attempts to instantiate both the enhanced and streamlined `.dis` generators with memory management precautions. If initialization fails, the corresponding generator is set to None.
+        """
         try:
+            import gc
+            import time
             from conversation_dis_enhanced import ConversationDisEnhanced
+            
+            # Add delay and garbage collection for memory management
+            time.sleep(0.1)
+            gc.collect()
+            
             self.conversation_dis_enhanced = ConversationDisEnhanced(
                 self.daemon.components.get('dis_generator'),
                 self.vault_path,
@@ -128,7 +163,14 @@ class EnhancedSystemIntegration:
         
         # Initialize streamlined dis generator (Issue #4)
         try:
+            import gc
+            import time
             from streamlined_dis_template import StreamlinedFloatDisGenerator
+            
+            # Add delay and garbage collection for memory management
+            time.sleep(0.1)
+            gc.collect()
+            
             self.streamlined_dis_generator = StreamlinedFloatDisGenerator()
             self.logger.info("Streamlined .dis generator initialized (Issue #4: 80% size reduction)")
         except Exception as e:
