@@ -3,8 +3,8 @@
 ## Unreleased - Planning Session  
 **Date:** 2025-06-20
 
-### 🐛 Known Issues
-- **Intermittent segfault during initialization (#13)**: lf1m occasionally crashes during component initialization, possibly due to ChromaDB resource contention or Ollama connection race conditions. Usually works on retry.
+### 🐛 Bug Fixes
+- **Fixed intermittent segfault (#13)**: Resolved by sharing single Ollama connection across components instead of creating 3 separate instances. Root cause was resource contention from simultaneous Ollama connections.
 
 ### 🔥 The Little Fucker Gets His Due Recognition (#12)
 - **RENAMED**: `streamlined_float_daemon.py` → `lf1m_daemon.py`
