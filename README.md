@@ -44,7 +44,7 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 ```
 /workspace/
 ├── tools/float-log/          # FLOAT development repo
-│   ├── streamlined_float_daemon.py
+│   ├── lf1m_daemon.py        # The Little Fucker - Boundary Guardian
 │   ├── enhanced_integration.py
 │   └── floatctl/
 ├── operations/               # Git-enabled processing repo
@@ -57,9 +57,9 @@ FLOAT (Feed-Log-Offload-Archive-Trunk) is an intelligent knowledge management sy
 ### Key Components
 
 #### Core Processing
-1. **Streamlined Daemon** (`streamlined_float_daemon.py`) - Main file watcher and orchestrator
+1. **lf1m Daemon** (`lf1m_daemon.py`) - The Little Fucker, Boundary Guardian who watches dropzone and orchestrates processing
 2. **Enhanced Integration** (`enhanced_integration.py`) - Deep ecosystem integration with sophisticated content classification
-3. **Enhanced Pattern Detector** (`enhanced_pattern_detector.py`) - Comprehensive FLOAT signal analysis (40+ pattern types)
+3. **Enhanced Pattern Detector** (`enhanced_pattern_detector.py`) - Comprehensive FLOAT signal analysis (40+ pattern types) 
 4. **Configuration System** (`config.py`) - Centralized configuration with environment variable support
 
 #### AI-Powered Analysis
@@ -995,10 +995,10 @@ Configure webhooks for external notifications:
 ## Support and Development
 
 ### Version Information
-- **Current Version**: 3.0.0
+- **Current Version**: 3.1.0
 - **Compatibility**: Python 3.8+, Obsidian 1.0+
 - **Dependencies**: See requirements.txt
-- **Major Features**: Git-integrated batch processing, semantic commit message parsing, floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
+- **Major Features**: Plugin architecture for pattern detection, git-integrated batch processing, semantic commit message parsing, floatctl CLI, content deduplication, smart routing, enhanced AI integration, comprehensive testing
 
 ### Contributing
 

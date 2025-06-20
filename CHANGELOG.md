@@ -3,8 +3,11 @@
 ## Unreleased - Planning Session  
 **Date:** 2025-06-20
 
-### 🐛 Bug Fixes
-- **Fixed intermittent segfault (#13)**: Resolved by sharing single Ollama connection across components instead of creating 3 separate instances. Root cause was resource contention from simultaneous Ollama connections.
+### 🐛 Bug Fixes  
+- **SEGFAULT ROOT CAUSE IDENTIFIED & PARTIALLY RESOLVED (#13, #14)**: Pattern detection plugin system was causing segmentation faults during daemon initialization due to unsafe dynamic module loading (`importlib.util.exec_module()`), circular references, and lack of resource cleanup. Temporarily disabled plugin system - success rate improved from ~0% to ~80%.
+- **Added defensive memory management**: Implemented `gc.collect()` and delays during component initialization to prevent memory pressure-related crashes.
+- **Created refactoring roadmap (#14)**: Comprehensive plan for memory-safe plugin architecture using entry points, weak references, and proper lifecycle management.
+- **Reduced Ollama connection contention**: Sharing single Ollama connection across components instead of creating 3 separate instances.
 
 ### 🔥 The Little Fucker Gets His Due Recognition (#12)
 - **RENAMED**: `streamlined_float_daemon.py` → `lf1m_daemon.py`
